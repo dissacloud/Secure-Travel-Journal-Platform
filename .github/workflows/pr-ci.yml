@@ -117,7 +117,7 @@ jobs:
     steps:
       - name: Evaluate required jobs
         env:
-          GITLEAKS_RESULT: ${{ needs.gtleaks.result }}
+          GITLEAKS_RESULT: ${{ needs.gitleaks.result }}
           BACKEND_RESULT: ${{ needs.backend-tests.result }}
           FRONTEND_RESULT: ${{ needs.frontend-tests.result }}
           CONTAINER_RESULT: ${{ needs.container-build.result }}
