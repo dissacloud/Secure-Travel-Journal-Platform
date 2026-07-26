@@ -1,0 +1,16 @@
+title = "Secure Travel Journal Platform secret-detection policy"
+
+# Retain Gitleaks' built-in detection rules for common credentials,
+# API keys, tokens and private keys.
+[extend]
+useDefault = true
+
+# Synthetic rule used only to demonstrate the blocking control safely.
+# This lets the portfolio prove the pipeline without using a real
+# provider credential format.
+[[rules]]
+id = "stjp-demo-secret"
+description = "Secure Travel Journal synthetic demonstration secret"
+regex = '''STJP_DEMO_SECRET_[A-Z0-9]{20}'''
+keywords = ["STJP_DEMO_SECRET_"]
+tags = ["secret", "portfolio-demo", "secure-travel-journal"]

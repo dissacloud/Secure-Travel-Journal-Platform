@@ -109,6 +109,7 @@ jobs:
     if: always()
 
     needs:
+      - gitleaks
       - backend-tests
       - frontend-tests
       - container-build
@@ -116,13 +117,21 @@ jobs:
     steps:
       - name: Evaluate required jobs
         env:
+          GITLEAKS_RESULT: ${{ needs.gtleaks.result }}
           BACKEND_RESULT: ${{ needs.backend-tests.result }}
           FRONTEND_RESULT: ${{ needs.frontend-tests.result }}
           CONTAINER_RESULT: ${{ needs.container-build.result }}
         run: |
+          echo "Gitleaks scan:  ${GITLEAKS_RESULT}"
           echo "Backend tests:  ${BACKEND_RESULT}"
           echo "Frontend checks: ${FRONTEND_RESULT}"
           echo "Container build: ${CONTAINER_RESULT}"
+
+          if [[ "${GITLEAKS_RESULT}" != "success" ]]; then
+            echo "::error::Gitleaks detected a potential hardcoded secret or failed to complete."
+            exit 1
+          fi
+
 
           if [[ "${BACKEND_RESULT}" != "success" ]]; then
             echo "::error::Backend tests did not pass."
@@ -139,4 +148,4 @@ jobs:
             exit 1
           fi
 
-          echo "All Phase 2.1 CI checks passed."
+          echo "All Phase 2.2 required checks passed."
