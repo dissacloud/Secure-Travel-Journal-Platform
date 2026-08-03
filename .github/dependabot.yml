@@ -1,1 +1,67 @@
+---
+version: 2
 
+updates:
+  - package-ecosystem: npm
+    directory: /application/backend
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Europe/London
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "deps(backend)"
+    groups:
+      backend-minor-and-patch:
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
+    cooldown:
+      semver-major-days: 14
+      semver-minor-days: 7
+      semver-patch-days: 3
+
+  - package-ecosystem: npm
+    directory: /application/frontend
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:15"
+      timezone: Europe/London
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "deps(frontend)"
+    groups:
+      frontend-minor-and-patch:
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
+    cooldown:
+      semver-major-days: 14
+      semver-minor-days: 7
+      semver-patch-days: 3
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:30"
+      timezone: Europe/London
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "deps(actions)"
+    groups:
+      actions-minor-and-patch:
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
+    cooldown:
+      default-days: 7

@@ -30,13 +30,13 @@ jobs:
 
     steps:
       - name: Checkout complete Git history
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           fetch-depth: 0
           persist-credentials: false
 
       - name: Scan repository for hardcoded secrets
-        uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3.0.0
+        uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e  # v3.0.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITLEAKS_CONFIG: .gitleaks.toml
@@ -56,21 +56,78 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           persist-credentials: false
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@e4fba868fa4b1b91e1fdab776edc8cfbe6e9fb81 # v4.37.3
+        uses: github/codeql-action/init@e4fba868fa4b1b91e1fdab776edc8cfbe6e9fb81  # v4.37.3
         with:
           languages: javascript-typescript
           build-mode: none
           config-file: ./.github/codeql/codeql-config.yml
 
       - name: Perform CodeQL analysis
-        uses: github/codeql-action/analyze@e4fba868fa4b1b91e1fdab776edc8cfbe6e9fb81 # v4.37.3
+        uses: github/codeql-action/analyze@e4fba868fa4b1b91e1fdab776edc8cfbe6e9fb81  # v4.37.3
         with:
           category: codeql/javascript-typescript
+
+  dependency-review:
+    name: Dependency Review
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Review dependency changes
+        uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294  # v5.0.0
+        with:
+          config-file: ./.github/dependency-review-config.yml
+
+  sca-audit:
+    name: SCA Audit — ${{ matrix.component }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - component: Backend
+            directory: application/backend
+            lockfile: application/backend/package-lock.json
+
+          - component: Frontend
+            directory: application/frontend
+            lockfile: application/frontend/package-lock.json
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: ${{ matrix.lockfile }}
+
+      - name: Audit dependency tree
+        working-directory: ${{ matrix.directory }}
+        run: npm audit --audit-level=high
 
   backend-tests:
     name: Backend Tests
@@ -83,10 +140,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
 
       - name: Set up Node.js
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7.0.0
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
@@ -109,10 +166,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
 
       - name: Set up Node.js
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7.0.0
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
@@ -138,7 +195,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
 
       - name: Build backend container
         run: |
@@ -164,6 +221,8 @@ jobs:
     needs:
       - gitleaks
       - codeql
+      - dependency-review
+      - sca-audit
       - backend-tests
       - frontend-tests
       - container-build
@@ -172,13 +231,17 @@ jobs:
       - name: Evaluate required jobs
         env:
           GITLEAKS_RESULT: ${{ needs.gitleaks.result }}
-          CODEQL_RESULT: ${{ needs.codeql.result }}
+          CODEQL_RESULT: ${{ needs.codeql.result }
+          DEPENDENCY_REVIEW_RESULT: ${{ needs.dependency-review.result }}
+          SCA_RESULT: ${{ needs.sca-audit.result }}
           BACKEND_RESULT: ${{ needs.backend-tests.result }}
           FRONTEND_RESULT: ${{ needs.frontend-tests.result }}
           CONTAINER_RESULT: ${{ needs.container-build.result }}
         run: |
           echo "Gitleaks scan:  ${GITLEAKS_RESULT}"
           echo "CodeQL analysis:  ${CODEQL_RESULT}"
+          echo "Dependency review:   ${DEPENDENCY_REVIEW_RESULT}"
+          echo "SCA audit:           ${SCA_RESULT}"
           echo "Backend tests:  ${BACKEND_RESULT}"
           echo "Frontend checks: ${FRONTEND_RESULT}"
           echo "Container build: ${CONTAINER_RESULT}"
@@ -190,6 +253,23 @@ jobs:
 
           if [[ "${CODEQL_RESULT}" != "success" ]]; then
             echo "::error::CodeQL analysis did not complete successfully."
+            exit 1
+          fi
+
+          if [[ "${EVENT_NAME}" == "pull_request" ]]; then
+            if [[ "${DEPENDENCY_REVIEW_RESULT}" != "success" ]]; then
+              echo "::error::Dependency Review rejected the proposed dependency changes."
+              exit 1
+            fi
+          else
+            if [[ "${DEPENDENCY_REVIEW_RESULT}" != "skipped" ]]; then
+              echo "::error::Dependency Review returned an unexpected result."
+              exit 1
+            fi
+          fi
+
+          if [[ "${SCA_RESULT}" != "success" ]]; then
+            echo "::error::The dependency vulnerability audit did not pass."
             exit 1
           fi
 
@@ -208,4 +288,4 @@ jobs:
             exit 1
           fi
 
-          echo "All Phase 2.3 required checks passed."
+          echo "All Phase 2.4 required checks passed."
