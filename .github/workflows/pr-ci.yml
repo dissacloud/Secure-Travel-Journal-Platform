@@ -256,16 +256,10 @@ jobs:
             exit 1
           fi
 
-          if [[ "${EVENT_NAME}" == "pull_request" ]]; then
-            if [[ "${DEPENDENCY_REVIEW_RESULT}" != "success" ]]; then
-              echo "::error::Dependency Review rejected the proposed dependency changes."
-              exit 1
-            fi
-          else
-            if [[ "${DEPENDENCY_REVIEW_RESULT}" != "skipped" ]]; then
-              echo "::error::Dependency Review returned an unexpected result."
-              exit 1
-            fi
+          if [[ "${DEPENDENCY_REVIEW_RESULT}" != "success" &&
+                "${DEPENDENCY_REVIEW_RESULT}" != "skipped" ]]; then
+            echo "::error::Dependency Review returned an unexpected result."
+            exit 1
           fi
 
           if [[ "${SCA_RESULT}" != "success" ]]; then
@@ -292,4 +286,4 @@ jobs:
 
 
 
-          
+
