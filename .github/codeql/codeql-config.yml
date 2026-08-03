@@ -1,0 +1,13 @@
+---
+name: Secure Travel Journal CodeQL configuration
+
+queries:
+  - uses: security-extended
+
+paths:
+  - application/backend/src
+  - application/frontend/src
+
+paths-ignore:
+  - "**/*.test.js"
+  - "**/*.test.jsx"

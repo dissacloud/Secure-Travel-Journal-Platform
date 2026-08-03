@@ -1,3 +1,4 @@
+---
 name: Pull Request CI
 
 on:
@@ -43,6 +44,33 @@ jobs:
           GITLEAKS_ENABLE_COMMENTS: "false"
           GITLEAKS_ENABLE_UPLOAD_ARTIFACT: "false"
           GITLEAKS_ENABLE_SUMMARY: "true"
+
+  codeql:
+    name: CodeQL SAST
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    permissions:
+      contents: read
+      security-events: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@e4fba868fa4b1b91e1fdab776edc8cfbe6e9fb81 # v4.37.3
+        with:
+          languages: javascript-typescript
+          build-mode: none
+          config-file: ./.github/codeql/codeql-config.yml
+
+      - name: Perform CodeQL analysis
+        uses: github/codeql-action/analyze@e4fba868fa4b1b91e1fdab776edc8cfbe6e9fb81 # v4.37.3
+        with:
+          category: codeql/javascript-typescript
 
   backend-tests:
     name: Backend Tests
@@ -135,6 +163,7 @@ jobs:
 
     needs:
       - gitleaks
+      - codeql
       - backend-tests
       - frontend-tests
       - container-build
@@ -143,11 +172,13 @@ jobs:
       - name: Evaluate required jobs
         env:
           GITLEAKS_RESULT: ${{ needs.gitleaks.result }}
+          CODEQL_RESULT: ${{ needs.codeql.result }}
           BACKEND_RESULT: ${{ needs.backend-tests.result }}
           FRONTEND_RESULT: ${{ needs.frontend-tests.result }}
           CONTAINER_RESULT: ${{ needs.container-build.result }}
         run: |
           echo "Gitleaks scan:  ${GITLEAKS_RESULT}"
+          echo "CodeQL analysis:  ${CODEQL_RESULT}"
           echo "Backend tests:  ${BACKEND_RESULT}"
           echo "Frontend checks: ${FRONTEND_RESULT}"
           echo "Container build: ${CONTAINER_RESULT}"
@@ -157,6 +188,10 @@ jobs:
             exit 1
           fi
 
+          if [[ "${CODEQL_RESULT}" != "success" ]]; then
+            echo "::error::CodeQL analysis did not complete successfully."
+            exit 1
+          fi
 
           if [[ "${BACKEND_RESULT}" != "success" ]]; then
             echo "::error::Backend tests did not pass."
@@ -173,4 +208,4 @@ jobs:
             exit 1
           fi
 
-          echo "All Phase 2.2 required checks passed."
+          echo "All Phase 2.3 required checks passed."
