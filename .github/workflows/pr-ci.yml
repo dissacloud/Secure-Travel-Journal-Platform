@@ -230,6 +230,7 @@ jobs:
     steps:
       - name: Evaluate required jobs
         env:
+          EVENT_NAME: ${{ github.event_name }}
           GITLEAKS_RESULT: ${{ needs.gitleaks.result }}
           CODEQL_RESULT: ${{ needs.codeql.result }}
           DEPENDENCY_REVIEW_RESULT: ${{ needs.dependency-review.result }}
