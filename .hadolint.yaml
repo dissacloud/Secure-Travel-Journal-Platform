@@ -1,0 +1,11 @@
+---
+failure-threshold: warning
+no-color: true
+
+trustedRegistries:
+  - docker.io
+
+override:
+  error:
+    - DL3002
+    - DL3007
