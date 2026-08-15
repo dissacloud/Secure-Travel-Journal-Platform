@@ -184,32 +184,127 @@ jobs:
       - name: Build frontend production bundle
         run: npm run build
 
-  container-build:
-    name: Container Build Validation
+  dockerfile-lint:
+    name: Dockerfile Security — ${{ matrix.component }}
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - component: Backend
+            dockerfile: application/backend/Dockerfile
+
+          - component: Frontend
+            dockerfile: application/frontend/Dockerfile
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Lint Dockerfile
+        uses: hadolint/hadolint-action@2a66e89f53d0771bb131a7fa31f3136336094aa6 # v3.4.0
+        with:
+          dockerfile: ${{ matrix.dockerfile }}
+          config: .hadolint.yaml
+          no-fail: false
+
+  container-security:
+    name: Container Security — ${{ matrix.component }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     needs:
       - backend-tests
       - frontend-tests
+      - dockerfile-lint
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - component: Backend
+            id: backend
+            context: application/backend
+            dockerfile: application/backend/Dockerfile
+            image: secure-travel-journal-backend
+
+          - component: Frontend
+            id: frontend
+            context: application/frontend
+            dockerfile: application/frontend/Dockerfile
+            image: secure-travel-journal-frontend
+
+    permissions:
+      contents: read
+      security-events: write
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
-      - name: Build backend container
+      - name: Build container image
         run: |
           docker build \
-            --file application/backend/Dockerfile \
-            --tag secure-travel-journal-backend:pr-${{ github.sha }} \
-            application/backend
+            --file "${{ matrix.dockerfile }}" \
+            --tag "${{ matrix.image }}:pr-${{ github.sha }}" \
+            "${{ matrix.context }}"
 
-      - name: Build frontend container
-        run: |
-          docker build \
-            --file application/frontend/Dockerfile \
-            --tag secure-travel-journal-frontend:pr-${{ github.sha }} \
-            application/frontend
+      - name: Generate Trivy vulnerability report
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: image
+          image-ref: ${{ matrix.image }}:pr-${{ github.sha }}
+          version: v0.73.0
+          scanners: vuln
+          vuln-type: os,library
+          severity: HIGH,CRITICAL
+          ignore-unfixed: false
+          format: sarif
+          output: trivy-${{ matrix.id }}.sarif
+          limit-severities-for-sarif: true
+          exit-code: "0"
+
+      - name: Upload Trivy results to GitHub code scanning
+        if: always()
+        uses: github/codeql-action/upload-sarif@e4fba868fa4b1b91e1fdab776edc8cfbe6e9fb81 # v4.37.3
+        with:
+          sarif_file: trivy-${{ matrix.id }}.sarif
+          category: trivy/${{ matrix.id }}
+
+      - name: Block critical vulnerabilities
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: image
+          image-ref: ${{ matrix.image }}:pr-${{ github.sha }}
+          scanners: vuln
+          vuln-type: os,library
+          severity: CRITICAL
+          ignore-unfixed: false
+          format: table
+          exit-code: "1"
+          skip-setup-trivy: true
+
+      - name: Block fixable high vulnerabilities
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: image
+          image-ref: ${{ matrix.image }}:pr-${{ github.sha }}
+          scanners: vuln
+          vuln-type: os,library
+          severity: HIGH
+          ignore-unfixed: true
+          format: table
+          exit-code: "1"
+          skip-setup-trivy: true
 
   ci-gate:
     name: CI Gate
@@ -225,7 +320,8 @@ jobs:
       - sca-audit
       - backend-tests
       - frontend-tests
-      - container-build
+      - dockerfile-lint
+      - container-security
 
     steps:
       - name: Evaluate required jobs
@@ -237,7 +333,8 @@ jobs:
           SCA_RESULT: ${{ needs.sca-audit.result }}
           BACKEND_RESULT: ${{ needs.backend-tests.result }}
           FRONTEND_RESULT: ${{ needs.frontend-tests.result }}
-          CONTAINER_RESULT: ${{ needs.container-build.result }}
+          DOCKERFILE_RESULT: ${{ needs.dockerfile-lint.result }}
+          CONTAINER_SECURITY_RESULT: ${{ needs.container-security.result }}
         run: |
           echo "Gitleaks scan:  ${GITLEAKS_RESULT}"
           echo "CodeQL analysis:  ${CODEQL_RESULT}"
@@ -245,7 +342,8 @@ jobs:
           echo "SCA audit:           ${SCA_RESULT}"
           echo "Backend tests:  ${BACKEND_RESULT}"
           echo "Frontend checks: ${FRONTEND_RESULT}"
-          echo "Container build: ${CONTAINER_RESULT}"
+          echo "Dockerfile lint:     ${DOCKERFILE_RESULT}"
+          echo "Container security:  ${CONTAINER_SECURITY_RESULT}"
 
           if [[ "${GITLEAKS_RESULT}" != "success" ]]; then
             echo "::error::Gitleaks detected a potential hardcoded secret or failed to complete."
@@ -278,12 +376,17 @@ jobs:
             exit 1
           fi
 
-          if [[ "${CONTAINER_RESULT}" != "success" ]]; then
-            echo "::error::Container build validation did not pass."
+          if [[ "${DOCKERFILE_RESULT}" != "success" ]]; then
+            echo "::error::Dockerfile security validation did not pass."
             exit 1
           fi
 
-          echo "All Phase 2.4 required checks passed."
+          if [[ "${CONTAINER_SECURITY_RESULT}" != "success" ]]; then
+            echo "::error::Container image security validation did not pass."
+            exit 1
+          fi
+
+          echo "All Phase 2.5 required checks passed."
 
 
 
