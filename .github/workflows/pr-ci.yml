@@ -503,7 +503,7 @@ jobs:
           CONTAINER_SECURITY_RESULT: ${{ needs.container-security.result }}
           TERRAFORM_SECURITY_RESULT: ${{ needs.terraform-security.result }}
           KUBERNETES_SECURITY_RESULT: ${{ needs.kubernetes-security.result }}
-          WORKFLOW_SECURITY_RESULT: ${{ needs.workflow-security.result }
+          WORKFLOW_SECURITY_RESULT: ${{ needs.workflow-security.result }}
         run: |
           set -euo pipefail
 
