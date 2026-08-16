@@ -18,6 +18,8 @@ concurrency:
 
 env:
   NODE_VERSION: "22.12.0"
+  PYTHON_VERSION: "3.12"
+  CHECKOV_VERSION: "3.3.9"
 
 jobs:
   gitleaks:
@@ -306,6 +308,144 @@ jobs:
           exit-code: "1"
           skip-setup-trivy: true
 
+  terraform-security:
+    name: IaC Security — Terraform
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    permissions:
+      contents: read
+      security-events: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install Checkov
+        run: |
+          python -m pip install \
+            --disable-pip-version-check \
+            "checkov==${CHECKOV_VERSION}"
+
+          checkov --version
+
+      - name: Detect Terraform files
+        id: terraform-target
+        shell: bash
+        run: |
+          if find infrastructure \
+            -type f \
+            -name '*.tf' \
+            -print -quit | grep -q .; then
+
+            echo "present=true" >> "$GITHUB_OUTPUT"
+            echo "Terraform configuration detected."
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "No Terraform configuration exists yet."
+          fi
+
+      - name: Generate Terraform security report
+        if: steps.terraform-target.outputs.present == 'true'
+        run: |
+          checkov \
+            --directory infrastructure \
+            --framework terraform \
+            --soft-fail \
+            --output sarif \
+            > checkov-terraform.sarif
+
+      - name: Upload Terraform findings
+        if: steps.terraform-target.outputs.present == 'true'
+        uses: github/codeql-action/upload-sarif@ff2f1c621b7f889edc0d3c761ac2e6a3f8cdb0dd # v4.37.7
+        with:
+          sarif_file: checkov-terraform.sarif
+          category: checkov/terraform
+
+      - name: Enforce Terraform security policy
+        if: steps.terraform-target.outputs.present == 'true'
+        run: |
+          checkov \
+            --directory infrastructure \
+            --framework terraform \
+            --compact
+
+  kubernetes-security:
+    name: IaC Security — Kubernetes
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    permissions:
+      contents: read
+      security-events: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install Checkov
+        run: |
+          python -m pip install \
+            --disable-pip-version-check \
+            "checkov==${CHECKOV_VERSION}"
+
+          checkov --version
+
+      - name: Detect Kubernetes manifests
+        id: kubernetes-target
+        shell: bash
+        run: |
+          if find platform/kubernetes \
+            -type f \
+            \( -name '*.yaml' -o -name '*.yml' \) \
+            -print -quit | grep -q .; then
+
+            echo "present=true" >> "$GITHUB_OUTPUT"
+            echo "Kubernetes configuration detected."
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "No Kubernetes manifests exist yet."
+          fi
+
+      - name: Generate Kubernetes security report
+        if: steps.kubernetes-target.outputs.present == 'true'
+        run: |
+          checkov \
+            --directory platform/kubernetes \
+            --framework kubernetes \
+            --soft-fail \
+            --output sarif \
+            > checkov-kubernetes.sarif
+
+      - name: Upload Kubernetes findings
+        if: steps.kubernetes-target.outputs.present == 'true'
+        uses: github/codeql-action/upload-sarif@ff2f1c621b7f889edc0d3c761ac2e6a3f8cdb0dd # v4.37.7
+        with:
+          sarif_file: checkov-kubernetes.sarif
+          category: checkov/kubernetes
+
+      - name: Enforce Kubernetes security policy
+        if: steps.kubernetes-target.outputs.present == 'true'
+        run: |
+          checkov \
+            --directory platform/kubernetes \
+            --framework kubernetes \
+            --compact
+
   ci-gate:
     name: CI Gate
     runs-on: ubuntu-latest
@@ -322,6 +462,8 @@ jobs:
       - frontend-tests
       - dockerfile-lint
       - container-security
+      - terraform-security
+      - kubernetes-security
 
     steps:
       - name: Evaluate required jobs
@@ -335,6 +477,8 @@ jobs:
           FRONTEND_RESULT: ${{ needs.frontend-tests.result }}
           DOCKERFILE_RESULT: ${{ needs.dockerfile-lint.result }}
           CONTAINER_SECURITY_RESULT: ${{ needs.container-security.result }}
+          TERRAFORM_SECURITY_RESULT: ${{ needs.terraform-security.result }}
+          KUBERNETES_SECURITY_RESULT: ${{ needs.kubernetes-security.result }}
         run: |
           echo "Gitleaks scan:  ${GITLEAKS_RESULT}"
           echo "CodeQL analysis:  ${CODEQL_RESULT}"
@@ -344,6 +488,8 @@ jobs:
           echo "Frontend checks: ${FRONTEND_RESULT}"
           echo "Dockerfile lint:     ${DOCKERFILE_RESULT}"
           echo "Container security:  ${CONTAINER_SECURITY_RESULT}"
+          echo "Terraform security:  ${TERRAFORM_SECURITY_RESULT}"
+          echo "Kubernetes security: ${KUBERNETES_SECURITY_RESULT}"
 
           if [[ "${GITLEAKS_RESULT}" != "success" ]]; then
             echo "::error::Gitleaks detected a potential hardcoded secret or failed to complete."
@@ -386,7 +532,17 @@ jobs:
             exit 1
           fi
 
-          echo "All Phase 2.5 required checks passed."
+          if [[ "${TERRAFORM_SECURITY_RESULT}" != "success" ]]; then
+            echo "::error::Terraform security validation did not pass."
+            exit 1
+          fi
+
+          if [[ "${KUBERNETES_SECURITY_RESULT}" != "success" ]]; then
+            echo "::error::Kubernetes security validation did not pass."
+            exit 1
+          fi
+
+          echo "All Phase 2.6 required checks passed."
 
 
 
