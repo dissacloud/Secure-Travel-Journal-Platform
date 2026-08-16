@@ -472,7 +472,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
-    permissions {}
+    permissions: {}
 
     if: always()
 
@@ -582,7 +582,3 @@ jobs:
           fi
 
           echo "All Phase 2 security controls passed."
-
-
-
-
