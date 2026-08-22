@@ -1,1 +1,17 @@
+# Default repository owner
+* @dissacloud
 
+# CI/CD and repository security controls
+/.github/workflows/ @dissacloud
+/.github/codeql/ @dissacloud
+/.github/dependabot.yml @dissacloud
+/.gitleaks.toml @dissacloud
+/.hadolint.yaml @dissacloud
+
+# Infrastructure and workload security
+/infrastructure/ @dissacloud
+/platform/kubernetes/ @dissacloud
+
+# Security governance
+/docs/security/ @dissacloud
+/scripts/ci/ @dissacloud

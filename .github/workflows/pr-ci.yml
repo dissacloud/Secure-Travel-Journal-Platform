@@ -63,14 +63,14 @@ jobs:
           persist-credentials: false
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@e4fba868fa4b1b91e1fdab776edc8cfbe6e9fb81  # v4.37.3
+        uses: github/codeql-action/init@5595ccaf912efad79be6eef63a5619ff05969be3  # v4.37.7
         with:
           languages: javascript-typescript
           build-mode: none
           config-file: ./.github/codeql/codeql-config.yml
 
       - name: Perform CodeQL analysis
-        uses: github/codeql-action/analyze@e4fba868fa4b1b91e1fdab776edc8cfbe6e9fb81  # v4.37.3
+        uses: github/codeql-action/analyze@5595ccaf912efad79be6eef63a5619ff05969be3  # v4.37.7
         with:
           category: codeql/javascript-typescript
 
@@ -143,6 +143,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Set up Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7.0.0
@@ -169,6 +171,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Set up Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7.0.0
@@ -277,7 +281,7 @@ jobs:
 
       - name: Upload Trivy results to GitHub code scanning
         if: always()
-        uses: github/codeql-action/upload-sarif@e4fba868fa4b1b91e1fdab776edc8cfbe6e9fb81 # v4.37.3
+        uses: github/codeql-action/upload-sarif@5595ccaf912efad79be6eef63a5619ff05969be3 # v4.37.6
         with:
           sarif_file: trivy-${{ matrix.id }}.sarif
           category: trivy/${{ matrix.id }}
@@ -319,7 +323,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
@@ -364,7 +368,7 @@ jobs:
 
       - name: Upload Terraform findings
         if: steps.terraform-target.outputs.present == 'true'
-        uses: github/codeql-action/upload-sarif@ff2f1c621b7f889edc0d3c761ac2e6a3f8cdb0dd # v4.37.7
+        uses: github/codeql-action/upload-sarif@5595ccaf912efad79be6eef63a5619ff05969be3 # v4.37.6
         with:
           sarif_file: checkov-terraform.sarif
           category: checkov/terraform
@@ -388,7 +392,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
@@ -433,7 +437,7 @@ jobs:
 
       - name: Upload Kubernetes findings
         if: steps.kubernetes-target.outputs.present == 'true'
-        uses: github/codeql-action/upload-sarif@ff2f1c621b7f889edc0d3c761ac2e6a3f8cdb0dd # v4.37.7
+        uses: github/codeql-action/upload-sarif@5595ccaf912efad79be6eef63a5619ff05969be3 # v4.37.6
         with:
           sarif_file: checkov-kubernetes.sarif
           category: checkov/kubernetes
@@ -446,10 +450,29 @@ jobs:
             --framework kubernetes \
             --compact
 
+  workflow-security:
+    name: GitHub Actions Security Policy
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Verify workflow security controls
+        run: scripts/ci/verify-workflow-hardening.sh
+
   ci-gate:
     name: CI Gate
     runs-on: ubuntu-latest
     timeout-minutes: 5
+
+    permissions: {}
 
     if: always()
 
@@ -464,6 +487,7 @@ jobs:
       - container-security
       - terraform-security
       - kubernetes-security
+      - workflow-security
 
     steps:
       - name: Evaluate required jobs
@@ -479,7 +503,10 @@ jobs:
           CONTAINER_SECURITY_RESULT: ${{ needs.container-security.result }}
           TERRAFORM_SECURITY_RESULT: ${{ needs.terraform-security.result }}
           KUBERNETES_SECURITY_RESULT: ${{ needs.kubernetes-security.result }}
+          WORKFLOW_SECURITY_RESULT: ${{ needs.workflow-security.result }}
         run: |
+          set -euo pipefail
+
           echo "Gitleaks scan:  ${GITLEAKS_RESULT}"
           echo "CodeQL analysis:  ${CODEQL_RESULT}"
           echo "Dependency review:   ${DEPENDENCY_REVIEW_RESULT}"
@@ -490,6 +517,7 @@ jobs:
           echo "Container security:  ${CONTAINER_SECURITY_RESULT}"
           echo "Terraform security:  ${TERRAFORM_SECURITY_RESULT}"
           echo "Kubernetes security: ${KUBERNETES_SECURITY_RESULT}"
+          echo "Workflow security:   ${WORKFLOW_SECURITY_RESULT}"
 
           if [[ "${GITLEAKS_RESULT}" != "success" ]]; then
             echo "::error::Gitleaks detected a potential hardcoded secret or failed to complete."
@@ -501,10 +529,16 @@ jobs:
             exit 1
           fi
 
-          if [[ "${DEPENDENCY_REVIEW_RESULT}" != "success" &&
-                "${DEPENDENCY_REVIEW_RESULT}" != "skipped" ]]; then
-            echo "::error::Dependency Review returned an unexpected result."
-            exit 1
+          if [[ "${EVENT_NAME}" == "pull_request" ]]; then
+            if [[ "${DEPENDENCY_REVIEW_RESULT}" != "success" ]]; then
+              echo "::error::Dependency Review must pass for pull requests."
+              exit 1
+            fi
+          else
+            if [[ "${DEPENDENCY_REVIEW_RESULT}" != "skipped" ]]; then
+              echo "::error::Dependency Review returned an unexpected result for ${EVENT_NAME}."
+              exit 1
+            fi
           fi
 
           if [[ "${SCA_RESULT}" != "success" ]]; then
@@ -542,8 +576,9 @@ jobs:
             exit 1
           fi
 
-          echo "All Phase 2.6 required checks passed."
+          if [[ "${WORKFLOW_SECURITY_RESULT}" != "success" ]]; then
+            echo "::error::GitHub Actions security policy did not pass."
+            exit 1
+          fi
 
-
-
-
+          echo "All Phase 2 security controls passed."
