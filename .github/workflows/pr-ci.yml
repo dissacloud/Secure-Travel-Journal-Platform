@@ -364,13 +364,20 @@ jobs:
             --framework terraform \
             --soft-fail \
             --output sarif \
-            > checkov-terraform.sarif
+            --output-file-path checkov-terraform-results
+
+      - name: Validate Terraform SARIF
+        if: steps.terraform-target.outputs.present == 'true'
+        run: |
+          test -s checkov-terraform-results/results_sarif.sarif
+          jq empty checkov-terraform-results/results_sarif.sarif
+          echo "Checkov SARIF is valid JSON."
 
       - name: Upload Terraform findings
         if: steps.terraform-target.outputs.present == 'true'
         uses: github/codeql-action/upload-sarif@5595ccaf912efad79be6eef63a5619ff05969be3 # v4.37.6
         with:
-          sarif_file: checkov-terraform.sarif
+          sarif_file: checkov-terraform-results/results_sarif.sarif
           category: checkov/terraform
 
       - name: Enforce Terraform security policy

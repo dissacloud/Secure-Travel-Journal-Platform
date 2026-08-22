@@ -1,0 +1,63 @@
+---
+name: Trusted Build
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/trusted-build.yml"
+      - "infrastructure/bootstrap/trusted-build/**"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: trusted-build-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  verify-aws-federation:
+    name: Verify AWS OIDC Federation
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    if: github.ref == 'refs/heads/main'
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+
+      - name: Configure short-lived AWS credentials
+        uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502
+        with:
+          role-to-assume: ${{ vars.AWS_TRUSTED_BUILD_ROLE_ARN }}
+          role-session-name: stjp-trusted-build-${{ github.run_id }}
+          aws-region: ${{ vars.AWS_REGION }}
+          allowed-account-ids: ${{ vars.AWS_ACCOUNT_ID }}
+          mask-aws-account-id: true
+
+      - name: Verify assumed AWS identity
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          aws sts get-caller-identity
+
+      - name: Verify ECR authentication permission
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          aws ecr get-login-password \
+            --region "${{ vars.AWS_REGION }}" \
+            >/dev/null
+
+          echo "Amazon ECR authentication succeeded."

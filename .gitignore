@@ -22,3 +22,13 @@ Thumbs.db
 postgres-data/
 .venv-checkov/
 .venv-checkov/
+
+# Terraform working files
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.tfvars
+
+# Keep templates
+!*.tfvars.example
