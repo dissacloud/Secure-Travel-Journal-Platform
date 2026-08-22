@@ -364,13 +364,13 @@ jobs:
             --framework terraform \
             --soft-fail \
             --output sarif \
-            --output-file-path checkov-terraform.sarif
+            --output-file-path checkov-terraform-results
 
       - name: Validate Terraform SARIF
         if: steps.terraform-target.outputs.present == 'true'
         run: |
-          test -s checkov-terraform.sarif
-          jq empty checkov-terraform.sarif
+          test -s checkov-terraform.sarif/results_sarif.sarif
+          jq empty checkov-terraform.sarif/results_sarif.sarif
           echo "Checkov SARIF is valid JSON."
 
       - name: Upload Terraform findings
