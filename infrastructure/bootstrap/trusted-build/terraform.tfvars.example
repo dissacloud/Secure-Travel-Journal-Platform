@@ -1,0 +1,7 @@
+aws_region = "eu-west-2"
+
+github_owner         = "dissacloud"
+github_repository    = "Secure-Travel-Journal-Platform"
+
+github_owner_id      = "REPLACE_WITH_OWNER_ID"
+github_repository_id = "REPLACE_WITH_REPOSITORY_ID"
