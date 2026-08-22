@@ -3,10 +3,12 @@ name: Trusted Build
 
 on:
   workflow_dispatch:
+
   push:
     branches:
       - main
     paths:
+      - "application/**"
       - ".github/workflows/trusted-build.yml"
       - "infrastructure/bootstrap/trusted-build/**"
 
@@ -17,11 +19,14 @@ concurrency:
   group: trusted-build-${{ github.ref }}
   cancel-in-progress: false
 
+env:
+  TRIVY_VERSION: "0.74.0"
+
 jobs:
-  verify-aws-federation:
-    name: Verify AWS OIDC Federation
+  publish-image:
+    name: Trusted Image — ${{ matrix.component }}
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 30
 
     if: github.ref == 'refs/heads/main'
 
@@ -29,35 +34,250 @@ jobs:
       contents: read
       id-token: write
 
+    strategy:
+      fail-fast: false
+
+      matrix:
+        include:
+          - component: Backend
+            component_id: backend
+            context: application/backend
+            dockerfile: application/backend/Dockerfile
+
+          - component: Frontend
+            component_id: frontend
+            context: application/frontend
+            dockerfile: application/frontend/Dockerfile
+
     steps:
       - name: Checkout repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
       - name: Configure short-lived AWS credentials
-        uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502
+        uses: aws-actions/configure-aws-credentials@e6de054238d6b7531b4efff3b6587d9aade6a06c # v6.2.3
         with:
           role-to-assume: ${{ vars.AWS_TRUSTED_BUILD_ROLE_ARN }}
-          role-session-name: stjp-trusted-build-${{ github.run_id }}
+          role-session-name: stjp-build-${{ github.run_id }}-${{ matrix.component_id }}
           aws-region: ${{ vars.AWS_REGION }}
           allowed-account-ids: ${{ vars.AWS_ACCOUNT_ID }}
           mask-aws-account-id: true
 
-      - name: Verify assumed AWS identity
+      - name: Login to Amazon ECR
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@03f1aad4c6c7ffd436567f42f9384779290529bd # v2.1.7
+
+      - name: Define immutable build metadata
+        id: metadata
         shell: bash
+        env:
+          REGISTRY: ${{ steps.ecr-login.outputs.registry }}
+          COMPONENT_ID: ${{ matrix.component_id }}
+          BACKEND_REPOSITORY: ${{ vars.ECR_BACKEND_REPOSITORY }}
+          FRONTEND_REPOSITORY: ${{ vars.ECR_FRONTEND_REPOSITORY }}
         run: |
           set -euo pipefail
 
-          aws sts get-caller-identity
+          case "${COMPONENT_ID}" in
+            backend)
+              repository="${BACKEND_REPOSITORY}"
+              ;;
+            frontend)
+              repository="${FRONTEND_REPOSITORY}"
+              ;;
+            *)
+              echo "::error::Unknown component: ${COMPONENT_ID}"
+              exit 1
+              ;;
+          esac
 
-      - name: Verify ECR authentication permission
+          image_tag="sha-${GITHUB_SHA}"
+          image_ref="${REGISTRY}/${repository}:${image_tag}"
+
+          echo "repository=${repository}" >> "$GITHUB_OUTPUT"
+          echo "image_tag=${image_tag}" >> "$GITHUB_OUTPUT"
+          echo "image_ref=${image_ref}" >> "$GITHUB_OUTPUT"
+
+          echo "Component:  ${COMPONENT_ID}"
+          echo "Repository: ${repository}"
+          echo "Tag:        ${image_tag}"
+
+      - name: Reject duplicate immutable release
         shell: bash
+        env:
+          REPOSITORY: ${{ steps.metadata.outputs.repository }}
+          IMAGE_TAG: ${{ steps.metadata.outputs.image_tag }}
         run: |
           set -euo pipefail
 
-          aws ecr get-login-password \
+          if aws ecr describe-images \
+            --repository-name "${REPOSITORY}" \
+            --image-ids "imageTag=${IMAGE_TAG}" \
             --region "${{ vars.AWS_REGION }}" \
-            >/dev/null
+            >/dev/null 2>&1; then
 
-          echo "Amazon ECR authentication succeeded."
+            echo "::error::Image ${REPOSITORY}:${IMAGE_TAG} already exists."
+            echo "::error::Trusted build artifacts are immutable and will not be overwritten."
+            exit 1
+          fi
+
+          echo "No existing immutable artifact found."
+
+      - name: Build container image once
+        shell: bash
+        env:
+          IMAGE_REF: ${{ steps.metadata.outputs.image_ref }}
+        run: |
+          set -euo pipefail
+
+          docker build \
+            --pull \
+            --file "${{ matrix.dockerfile }}" \
+            --tag "${IMAGE_REF}" \
+            "${{ matrix.context }}"
+
+      - name: Record local image identity
+        id: local-image
+        shell: bash
+        env:
+          IMAGE_REF: ${{ steps.metadata.outputs.image_ref }}
+        run: |
+          set -euo pipefail
+
+          image_id="$(
+            docker image inspect \
+              "${IMAGE_REF}" \
+              --format '{{.Id}}'
+          )"
+
+          echo "image_id=${image_id}" >> "$GITHUB_OUTPUT"
+          echo "Local image ID: ${image_id}"
+
+      - name: Scan exact built image with Trivy
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: image
+          image-ref: ${{ steps.metadata.outputs.image_ref }}
+          version: v0.74.0
+          scanners: vuln
+          vuln-type: os,library
+          severity: HIGH,CRITICAL
+          ignore-unfixed: false
+          format: table
+          exit-code: "0"
+
+      - name: Block critical vulnerabilities
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: image
+          image-ref: ${{ steps.metadata.outputs.image_ref }}
+          scanners: vuln
+          vuln-type: os,library
+          severity: CRITICAL
+          ignore-unfixed: false
+          format: table
+          exit-code: "1"
+          skip-setup-trivy: true
+
+      - name: Block fixable high vulnerabilities
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: image
+          image-ref: ${{ steps.metadata.outputs.image_ref }}
+          scanners: vuln
+          vuln-type: os,library
+          severity: HIGH
+          ignore-unfixed: true
+          format: table
+          exit-code: "1"
+          skip-setup-trivy: true
+
+      - name: Push approved image to Amazon ECR
+        shell: bash
+        env:
+          IMAGE_REF: ${{ steps.metadata.outputs.image_ref }}
+        run: |
+          set -euo pipefail
+
+          docker push "${IMAGE_REF}"
+
+      - name: Resolve immutable ECR digest
+        id: digest
+        shell: bash
+        env:
+          REPOSITORY: ${{ steps.metadata.outputs.repository }}
+          IMAGE_TAG: ${{ steps.metadata.outputs.image_tag }}
+          REGISTRY: ${{ steps.ecr-login.outputs.registry }}
+        run: |
+          set -euo pipefail
+
+          digest="$(
+            aws ecr describe-images \
+              --repository-name "${REPOSITORY}" \
+              --image-ids "imageTag=${IMAGE_TAG}" \
+              --region "${{ vars.AWS_REGION }}" \
+              --query 'imageDetails[0].imageDigest' \
+              --output text
+          )"
+
+          if [[ ! "${digest}" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+            echo "::error::Unexpected ECR digest: ${digest}"
+            exit 1
+          fi
+
+          digest_ref="${REGISTRY}/${REPOSITORY}@${digest}"
+
+          echo "digest=${digest}" >> "$GITHUB_OUTPUT"
+          echo "digest_ref=${digest_ref}" >> "$GITHUB_OUTPUT"
+
+          echo "ECR digest: ${digest}"
+
+      - name: Verify published artifact
+        shell: bash
+        env:
+          REPOSITORY: ${{ steps.metadata.outputs.repository }}
+          IMAGE_TAG: ${{ steps.metadata.outputs.image_tag }}
+          EXPECTED_DIGEST: ${{ steps.digest.outputs.digest }}
+        run: |
+          set -euo pipefail
+
+          published_digest="$(
+            aws ecr describe-images \
+              --repository-name "${REPOSITORY}" \
+              --image-ids "imageTag=${IMAGE_TAG}" \
+              --region "${{ vars.AWS_REGION }}" \
+              --query 'imageDetails[0].imageDigest' \
+              --output text
+          )"
+
+          if [[ "${published_digest}" != "${EXPECTED_DIGEST}" ]]; then
+            echo "::error::Published digest verification failed."
+            exit 1
+          fi
+
+          echo "Published digest verified."
+
+      - name: Publish trusted-build summary
+        shell: bash
+        env:
+          COMPONENT: ${{ matrix.component }}
+          IMAGE_TAG: ${{ steps.metadata.outputs.image_tag }}
+          IMAGE_REF: ${{ steps.metadata.outputs.image_ref }}
+          LOCAL_IMAGE_ID: ${{ steps.local-image.outputs.image_id }}
+          DIGEST: ${{ steps.digest.outputs.digest }}
+          DIGEST_REF: ${{ steps.digest.outputs.digest_ref }}
+        run: |
+          {
+            echo "## ${COMPONENT} trusted artifact"
+            echo
+            echo "| Attribute | Value |"
+            echo "|---|---|"
+            echo "| Commit | \`${GITHUB_SHA}\` |"
+            echo "| Tag | \`${IMAGE_TAG}\` |"
+            echo "| Local image ID | \`${LOCAL_IMAGE_ID}\` |"
+            echo "| ECR digest | \`${DIGEST}\` |"
+            echo "| Immutable reference | \`${DIGEST_REF}\` |"
+            echo
+            echo "The image was built once, scanned before publication, and pushed only after the security gate passed."
+          } >> "$GITHUB_STEP_SUMMARY"
