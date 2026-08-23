@@ -21,6 +21,7 @@ concurrency:
 
 env:
   TRIVY_VERSION: "0.74.0"
+  SYFT_VERSION: "v1.50.0"
 
 jobs:
   publish-image:
@@ -267,6 +268,8 @@ jobs:
           LOCAL_IMAGE_ID: ${{ steps.local-image.outputs.image_id }}
           DIGEST: ${{ steps.digest.outputs.digest }}
           DIGEST_REF: ${{ steps.digest.outputs.digest_ref }}
+          SPDX_SHA256: ${{ steps.sbom-hashes.outputs.spdx_sha256 }}
+          CYCLONEDX_SHA256: ${{ steps.sbom-hashes.outputs.cyclonedx_sha256 }}
         run: |
           {
             echo "## ${COMPONENT} trusted artifact"
@@ -278,6 +281,172 @@ jobs:
             echo "| Local image ID | \`${LOCAL_IMAGE_ID}\` |"
             echo "| ECR digest | \`${DIGEST}\` |"
             echo "| Immutable reference | \`${DIGEST_REF}\` |"
+            echo "| SPDX SBOM | \`${COMPONENT_ID}.spdx.json\` |"
+            echo "| SPDX SHA256 | \`${SPDX_SHA256}\` |"
+            echo "| CycloneDX SBOM | \`${COMPONENT_ID}.cyclonedx.json\` |"
+            echo "| CycloneDX SHA256 | \`${CYCLONEDX_SHA256}\` |"
             echo
             echo "The image was built once, scanned before publication, and pushed only after the security gate passed."
           } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Prepare SBOM workspace
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          mkdir -p sbom
+
+          echo "SBOM workspace prepared."
+
+      - name: Generate SPDX SBOM
+        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0.24.0
+        with:
+          image: ${{ steps.digest.outputs.digest_ref }}
+          format: spdx-json
+          output-file: sbom/${{ matrix.component_id }}.spdx.json
+          artifact-name: sbom-${{ matrix.component_id }}-spdx
+          syft-version: ${{ env.SYFT_VERSION }}
+
+      - name: Generate CycloneDX SBOM
+        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0.24.0
+        with:
+          image: ${{ steps.digest.outputs.digest_ref }}
+          format: cyclonedx-json
+          output-file: sbom/${{ matrix.component_id }}.cyclonedx.json
+          artifact-name: sbom-${{ matrix.component_id }}-cyclonedx
+          syft-version: ${{ env.SYFT_VERSION }
+
+      - name: Validate SPDX SBOM
+        shell: bash
+        env:
+          SPDX_FILE: sbom/${{ matrix.component_id }}.spdx.json
+        run: |
+          set -euo pipefail
+
+          jq -e '
+            .spdxVersion != null
+            and .SPDXID != null
+            and (.packages | type == "array")
+          ' "${SPDX_FILE}" >/dev/null
+
+          package_count="$(
+            jq '.packages | length' "${SPDX_FILE}"
+          )"
+
+          if [[ "${package_count}" -lt 1 ]]; then
+            echo "::error::SPDX SBOM contains no packages."
+            exit 1
+          fi
+
+          echo "SPDX package count: ${package_count}"
+
+      - name: Validate CycloneDX SBOM
+        shell: bash
+        env:
+          CYCLONEDX_FILE: sbom/${{ matrix.component_id }}.cyclonedx.json
+        run: |
+          set -euo pipefail
+
+          jq -e '
+            .bomFormat == "CycloneDX"
+            and .specVersion != null
+            and (.components | type == "array")
+          ' "${CYCLONEDX_FILE}" >/dev/null
+
+          component_count="$(
+            jq '.components | length' "${CYCLONEDX_FILE}"
+          )"
+
+          if [[ "${component_count}" -lt 1 ]]; then
+            echo "::error::CycloneDX SBOM contains no components."
+            exit 1
+          fi
+
+          echo "CycloneDX component count: ${component_count}"
+
+      - name: Calculate SBOM integrity hashes
+        id: sbom-hashes
+        shell: bash
+        env:
+          COMPONENT_ID: ${{ matrix.component_id }}
+        run: |
+          set -euo pipefail
+
+          spdx_file="sbom/${COMPONENT_ID}.spdx.json"
+          cyclonedx_file="sbom/${COMPONENT_ID}.cyclonedx.json"
+
+          spdx_sha256="$(
+            sha256sum "${spdx_file}" | awk '{print $1}'
+          )"
+
+          cyclonedx_sha256="$(
+            sha256sum "${cyclonedx_file}" | awk '{print $1}'
+          )"
+
+          echo "spdx_sha256=${spdx_sha256}" >> "$GITHUB_OUTPUT"
+          echo "cyclonedx_sha256=${cyclonedx_sha256}" >> "$GITHUB_OUTPUT"
+
+          echo "SPDX SHA256:      ${spdx_sha256}"
+          echo "CycloneDX SHA256: ${cyclonedx_sha256}"
+
+      - name: Create SBOM metadata record
+        shell: bash
+        env:
+          COMPONENT: ${{ matrix.component }}
+          COMPONENT_ID: ${{ matrix.component_id }}
+          IMAGE_TAG: ${{ steps.metadata.outputs.image_tag }}
+          DIGEST: ${{ steps.digest.outputs.digest }}
+          DIGEST_REF: ${{ steps.digest.outputs.digest_ref }}
+          SPDX_SHA256: ${{ steps.sbom-hashes.outputs.spdx_sha256 }}
+          CYCLONEDX_SHA256: ${{ steps.sbom-hashes.outputs.cyclonedx_sha256 }}
+        run: |
+          set -euo pipefail
+
+          jq -n \
+            --arg component "${COMPONENT}" \
+            --arg commit "${GITHUB_SHA}" \
+            --arg image_tag "${IMAGE_TAG}" \
+            --arg image_digest "${DIGEST}" \
+            --arg image_ref "${DIGEST_REF}" \
+            --arg syft_version "${SYFT_VERSION}" \
+            --arg spdx_file "${COMPONENT_ID}.spdx.json" \
+            --arg spdx_sha256 "${SPDX_SHA256}" \
+            --arg cyclonedx_file "${COMPONENT_ID}.cyclonedx.json" \
+            --arg cyclonedx_sha256 "${CYCLONEDX_SHA256}" \
+            '{
+              component: $component,
+              source_commit: $commit,
+              container: {
+                tag: $image_tag,
+                digest: $image_digest,
+                immutable_reference: $image_ref
+              },
+              sbom_generator: {
+                name: "Syft",
+                version: $syft_version
+              },
+              sboms: {
+                spdx: {
+                  file: $spdx_file,
+                  sha256: $spdx_sha256
+                },
+                cyclonedx: {
+                  file: $cyclonedx_file,
+                  sha256: $cyclonedx_sha256
+                }
+              }
+            }' \
+            > "sbom/${COMPONENT_ID}.sbom-metadata.json"
+
+          jq . "sbom/${COMPONENT_ID}.sbom-metadata.json"
+
+      - name: Upload SBOM bundle
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: trusted-sbom-${{ matrix.component_id }}-${{ github.sha }}
+          path: |
+            sbom/${{ matrix.component_id }}.spdx.json
+            sbom/${{ matrix.component_id }}.cyclonedx.json
+            sbom/${{ matrix.component_id }}.sbom-metadata.json
+          if-no-files-found: error
+          retention-days: 30
