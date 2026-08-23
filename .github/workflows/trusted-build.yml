@@ -314,7 +314,7 @@ jobs:
           format: cyclonedx-json
           output-file: sbom/${{ matrix.component_id }}.cyclonedx.json
           artifact-name: sbom-${{ matrix.component_id }}-cyclonedx
-          syft-version: ${{ env.SYFT_VERSION }
+          syft-version: ${{ env.SYFT_VERSION }}
 
       - name: Validate SPDX SBOM
         shell: bash
