@@ -174,3 +174,50 @@ resource "aws_iam_role_policy" "ecr_publish" {
 
   policy = data.aws_iam_policy_document.ecr_publish.json
 }
+
+resource "aws_iam_role" "github_artifact_verifier" {
+  name = "${var.project_name}-github-artifact-verifier"
+
+  assume_role_policy = data.aws_iam_policy_document.github_trust.json
+
+  max_session_duration = 3600
+}
+
+data "aws_iam_policy_document" "ecr_verify" {
+  statement {
+    sid    = "ECRAuthentication"
+    effect = "Allow"
+
+    actions = [
+      "ecr:GetAuthorizationToken"
+    ]
+
+    resources = [
+      "*"
+    ]
+  }
+
+  statement {
+    sid    = "ReadTrustedArtifacts"
+    effect = "Allow"
+
+    actions = [
+      "ecr:BatchGetImage",
+      "ecr:DescribeImages",
+      "ecr:GetDownloadUrlForLayer",
+      "ecr:ListImages"
+    ]
+
+    resources = [
+      for repository in aws_ecr_repository.application :
+      repository.arn
+    ]
+  }
+}
+
+resource "aws_iam_role_policy" "ecr_verify" {
+  name = "${var.project_name}-ecr-verify"
+  role = aws_iam_role.github_artifact_verifier.id
+
+  policy = data.aws_iam_policy_document.ecr_verify.json
+}

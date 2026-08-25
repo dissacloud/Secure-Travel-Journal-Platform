@@ -21,3 +21,8 @@ output "ecr_repository_urls" {
     component => repository.repository_url
   }
 }
+
+output "artifact_verifier_role_arn" {
+  description = "Read-only IAM role used to verify trusted ECR artifacts."
+  value       = aws_iam_role.github_artifact_verifier.arn
+}
