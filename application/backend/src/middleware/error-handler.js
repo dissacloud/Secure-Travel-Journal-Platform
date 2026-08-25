@@ -1,3 +1,5 @@
+import { sanitizeLogValue } from '../utils/logging.js';
+
 export function notFoundHandler(req, res) {
   return res.status(404).json({
     error: {
@@ -27,7 +29,18 @@ export function errorHandler(error, req, res, next) {
   const isServerError = status >= 500;
 
   if (isServerError) {
-    console.error(`[${res.locals.requestId}] Unhandled request error`, error);
+    const safeRequestId = sanitizeLogValue(res.locals.requestId);
+    const safeErrorName = sanitizeLogValue(error?.name ?? 'Error');
+    const safeErrorMessage = sanitizeLogValue(
+      error?.message ?? 'Unknown server error',
+    );
+
+    console.error(
+      '[%s] Unhandled request error: %s: %s',
+      safeRequestId,
+      safeErrorName,
+      safeErrorMessage,
+    );
   }
 
   return res.status(status).json({
