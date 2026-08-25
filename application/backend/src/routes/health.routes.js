@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { sanitizeLogValue } from '../utils/logging.js';
 
 export const healthRouter = Router();
 
@@ -20,9 +21,15 @@ healthRouter.get('/ready', async (req, res) => {
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
+    const safeRequestId = sanitizeLogValue(res.locals.requestId);
+    const safeErrorMessage = sanitizeLogValue(
+      error instanceof Error ? error.message : error,
+    );
+
     console.error(
-      `[${res.locals.requestId}] Database readiness check failed`,
-      error.message,
+      '[%s] Database readiness check failed: %s',
+      safeRequestId,
+      safeErrorMessage,
     );
 
     return res.status(503).json({
