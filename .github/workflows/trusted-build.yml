@@ -546,3 +546,237 @@ jobs:
             sbom/${{ matrix.component_id }}.sbom-metadata.json
           if-no-files-found: error
           retention-days: 30
+
+
+  verify-trusted-artifact:
+    name: Verify Trusted Artifact — ${{ matrix.component }}
+    needs:
+      - publish-image
+
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    if: github.ref == 'refs/heads/main'
+
+    permissions:
+      contents: read
+      id-token: write
+      attestations: read
+
+    strategy:
+      fail-fast: false
+
+      matrix:
+        include:
+          - component: Backend
+            component_id: backend
+
+          - component: Frontend
+            component_id: frontend
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Configure read-only AWS credentials
+        uses: aws-actions/configure-aws-credentials@e6de054238d6b7531b4efff3b6587d9aade6a06c # v6.2.3
+        with:
+          role-to-assume: ${{ vars.AWS_ARTIFACT_VERIFIER_ROLE_ARN }}
+          role-session-name: stjp-verify-${{ github.run_id }}-${{ matrix.component_id }}
+          aws-region: ${{ vars.AWS_REGION }}
+          allowed-account-ids: ${{ vars.AWS_ACCOUNT_ID }}
+          mask-aws-account-id: true
+
+      - name: Login to Amazon ECR
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@03f1aad4c6c7ffd436567f42f9384779290529bd # v2.1.7
+
+      - name: Resolve trusted image digest
+        id: artifact
+        shell: bash
+        env:
+          REGISTRY: ${{ steps.ecr-login.outputs.registry }}
+          COMPONENT_ID: ${{ matrix.component_id }}
+          BACKEND_REPOSITORY: ${{ vars.ECR_BACKEND_REPOSITORY }}
+          FRONTEND_REPOSITORY: ${{ vars.ECR_FRONTEND_REPOSITORY }}
+        run: |
+          set -euo pipefail
+
+          case "${COMPONENT_ID}" in
+            backend)
+              repository="${BACKEND_REPOSITORY}"
+              ;;
+            frontend)
+              repository="${FRONTEND_REPOSITORY}"
+              ;;
+            *)
+              echo "::error::Unknown component ${COMPONENT_ID}"
+              exit 1
+              ;;
+          esac
+
+          image_tag="sha-${GITHUB_SHA}"
+
+          digest="$(
+            aws ecr describe-images \
+              --repository-name "${repository}" \
+              --image-ids "imageTag=${image_tag}" \
+              --region "${{ vars.AWS_REGION }}" \
+              --query 'imageDetails[0].imageDigest' \
+              --output text
+          )"
+
+          if [[ ! "${digest}" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+            echo "::error::Valid trusted image digest was not found."
+            exit 1
+          fi
+
+          digest_ref="${REGISTRY}/${repository}@${digest}"
+
+          echo "repository=${repository}" >> "$GITHUB_OUTPUT"
+          echo "digest=${digest}" >> "$GITHUB_OUTPUT"
+          echo "digest_ref=${digest_ref}" >> "$GITHUB_OUTPUT"
+
+          echo "Artifact: ${digest_ref}"
+
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+        with:
+          cosign-release: "v3.1.2"
+
+      - name: Verify trusted artifact policy
+
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DIGEST_REF: ${{ steps.artifact.outputs.digest_ref }}
+        run: |
+          scripts/security/verify-trusted-image.sh \
+            "${DIGEST_REF}" \
+            "${GITHUB_REPOSITORY}" \
+            "${GITHUB_SHA}"
+
+      - name: Create artifact verification record
+
+        shell: bash
+        env:
+          COMPONENT: ${{ matrix.component }}
+          COMPONENT_ID: ${{ matrix.component_id }}
+          DIGEST: ${{ steps.artifact.outputs.digest }}
+          DIGEST_REF: ${{ steps.artifact.outputs.digest_ref }}
+        run: |
+          set -euo pipefail
+
+          mkdir -p verification
+
+          jq -n \
+            --arg component "${COMPONENT}" \
+            --arg source_repository "${GITHUB_REPOSITORY}" \
+            --arg source_commit "${GITHUB_SHA}" \
+            --arg source_ref "${GITHUB_REF}" \
+            --arg image_digest "${DIGEST}" \
+            --arg immutable_reference "${DIGEST_REF}" \
+            --arg workflow "${GITHUB_WORKFLOW}" \
+            --arg run_id "${GITHUB_RUN_ID}" \
+            '{
+              verification_status: "PASSED",
+              component: $component,
+              source: {
+                repository: $source_repository,
+                commit: $source_commit,
+                ref: $source_ref
+              },
+              artifact: {
+                digest: $image_digest,
+                immutable_reference: $immutable_reference
+              },
+              policy: {
+                cosign_signature: "verified",
+                signer_identity: "verified",
+                oidc_issuer: "verified",
+                slsa_provenance: "verified",
+                spdx_attestation: "verified",
+                cyclonedx_attestation: "verified"
+              },
+              workflow: {
+                name: $workflow,
+                run_id: $run_id
+              }
+            }' \
+            > "verification/${COMPONENT_ID}.verification.json"
+
+          jq . \
+            "verification/${COMPONENT_ID}.verification.json"
+
+      - name: Upload verification record
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: trusted-verification-${{ matrix.component_id }}-${{ github.sha }}
+          path: |
+            verification/${{ matrix.component_id }}.verification.json
+            referrers.json
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Publish verification summary
+        shell: bash
+        env:
+          COMPONENT: ${{ matrix.component }}
+          DIGEST: ${{ steps.artifact.outputs.digest }}
+          DIGEST_REF: ${{ steps.artifact.outputs.digest_ref }}
+        run: |
+          {
+            echo "## ${COMPONENT} artifact verification"
+            echo
+            echo "| Control | Result |"
+            echo "|---|---|"
+            echo "| Immutable digest | \`${DIGEST}\` |"
+            echo "| Cosign signature | ✅ Verified |"
+            echo "| GitHub Actions signer identity | ✅ Verified |"
+            echo "| OIDC issuer | ✅ Verified |"
+            echo "| SLSA provenance | ✅ Verified |"
+            echo "| Source repository | ✅ ${GITHUB_REPOSITORY} |"
+            echo "| Source commit | ✅ \`${GITHUB_SHA}\` |"
+            echo "| Source ref | ✅ \`refs/heads/main\` |"
+            echo "| SPDX SBOM attestation | ✅ Verified |"
+            echo "| CycloneDX SBOM attestation | ✅ Verified |"
+            echo
+            echo "**Promotion status:** TRUSTED"
+            echo
+            echo "\`${DIGEST_REF}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+
+  trusted-artifact-gate:
+    name: Trusted Artifact Gate
+
+    needs:
+      - verify-trusted-artifact
+
+    if: always()
+
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    permissions: {}
+
+    steps:
+      - name: Enforce trusted artifact verification
+        shell: bash
+        env:
+          VERIFICATION_RESULT: ${{ needs.verify-trusted-artifact.result }}
+        run: |
+          set -euo pipefail
+
+          echo "Artifact verification: ${VERIFICATION_RESULT}"
+
+          if [[ "${VERIFICATION_RESULT}" != "success" ]]; then
+            echo "::error::Trusted artifact verification failed."
+            echo "::error::Artifact is not eligible for promotion."
+            exit 1
+          fi
+
+          echo "All trusted artifact verification controls passed."
+          echo "Artifact is eligible for promotion."
