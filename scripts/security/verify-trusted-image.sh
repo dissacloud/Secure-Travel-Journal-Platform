@@ -67,7 +67,7 @@ gh attestation verify \
   --signer-workflow "${SIGNER_WORKFLOW}" \
   --source-ref "refs/heads/main" \
   --source-digest "${SOURCE_COMMIT}" \
-  --predicate-type "https://cyclonedx.org/bom/v1.6"
+  --predicate-type "https://cyclonedx.org/bom"
 
 echo "CycloneDX attestation verified."
 
