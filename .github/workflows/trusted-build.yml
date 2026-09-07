@@ -659,6 +659,34 @@ jobs:
             "${GITHUB_REPOSITORY}" \
             "${GITHUB_SHA}"
 
+      - name: Prove verification fails closed
+
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DIGEST_REF: ${{ steps.artifact.outputs.digest_ref }}
+        run: |
+          set -euo pipefail
+
+          invalid_commit="0000000000000000000000000000000000000000"
+
+          echo "Running controlled negative verification test."
+          echo "Expected source commit: ${invalid_commit}"
+          echo "Actual source commit:   ${GITHUB_SHA}"
+
+          if scripts/security/verify-trusted-image.sh \
+            "${DIGEST_REF}" \
+            "${GITHUB_REPOSITORY}" \
+            "${invalid_commit}"
+          then
+            echo "::error::Negative verification unexpectedly succeeded."
+            echo "::error::Trusted artifact policy is not failing closed."
+            exit 1
+          fi
+
+          echo "Negative verification failed as expected."
+          echo "Fail-closed artifact policy confirmed."
+
       - name: Create artifact verification record
 
         shell: bash
@@ -751,6 +779,7 @@ jobs:
 
 
   trusted-artifact-gate:
+
     name: Trusted Artifact Gate
 
     needs:
@@ -781,3 +810,52 @@ jobs:
 
           echo "All trusted artifact verification controls passed."
           echo "Artifact is eligible for promotion."
+
+  phase-3-supply-chain-gate:
+    name: Phase 3 — Trusted Supply Chain
+
+    needs:
+      - publish-image
+      - verify-trusted-artifact
+      - trusted-artifact-gate
+
+    if: always()
+
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    permissions: {}
+
+    steps:
+      - name: Evaluate supply-chain controls
+        shell: bash
+        env:
+          PUBLISH_RESULT: ${{ needs.publish-image.result }}
+          VERIFY_RESULT: ${{ needs.verify-trusted-artifact.result }}
+          TRUST_GATE_RESULT: ${{ needs.trusted-artifact-gate.result }}
+        run: |
+          set -euo pipefail
+
+          echo "Trusted publication:     ${PUBLISH_RESULT}"
+          echo "Artifact verification:   ${VERIFY_RESULT}"
+          echo "Trusted artifact gate:    ${TRUST_GATE_RESULT}"
+
+          if [[ "${PUBLISH_RESULT}" != "success" ]]; then
+            echo "::error::Trusted artifact publication failed."
+            exit 1
+          fi
+
+          if [[ "${VERIFY_RESULT}" != "success" ]]; then
+            echo "::error::Trusted artifact verification failed."
+            exit 1
+          fi
+
+          if [[ "${TRUST_GATE_RESULT}" != "success" ]]; then
+            echo "::error::Trusted Artifact Gate did not pass."
+            exit 1
+          fi
+
+          echo
+          echo "======================================"
+          echo "PHASE 3 TRUSTED SUPPLY CHAIN PASSED"
+          echo "======================================"
