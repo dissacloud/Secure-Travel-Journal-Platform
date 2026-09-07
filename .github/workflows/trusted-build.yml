@@ -59,7 +59,7 @@ jobs:
           persist-credentials: false
 
       - name: Configure short-lived AWS credentials
-        uses: aws-actions/configure-aws-credentials@e6de054238d6b7531b4efff3b6587d9aade6a06c # v6.2.3
+        uses: aws-actions/configure-aws-credentials@cbe3b392738ccf3f987d68400dafcf4b0624a56c # v6.2.4
         with:
           role-to-assume: ${{ vars.AWS_TRUSTED_BUILD_ROLE_ARN }}
           role-session-name: stjp-build-${{ github.run_id }}-${{ matrix.component_id }}
@@ -304,7 +304,7 @@ jobs:
           echo "SBOM workspace prepared."
 
       - name: Generate SPDX SBOM
-        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0.24.0
+        uses: anchore/sbom-action@3ad7283483fc7af8ff2b4ea19663c2d5ca935e26 # v0.24.2
         with:
           image: ${{ steps.digest.outputs.digest_ref }}
           format: spdx-json
@@ -313,7 +313,7 @@ jobs:
           syft-version: ${{ env.SYFT_VERSION }}
 
       - name: Generate CycloneDX SBOM
-        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0.24.0
+        uses: anchore/sbom-action@3ad7283483fc7af8ff2b4ea19663c2d5ca935e26 # v0.24.2
         with:
           image: ${{ steps.digest.outputs.digest_ref }}
           format: cyclonedx-json
@@ -582,7 +582,7 @@ jobs:
           persist-credentials: false
 
       - name: Configure read-only AWS credentials
-        uses: aws-actions/configure-aws-credentials@e6de054238d6b7531b4efff3b6587d9aade6a06c # v6.2.3
+        uses: aws-actions/configure-aws-credentials@cbe3b392738ccf3f987d68400dafcf4b0624a56c # v6.2.4
         with:
           role-to-assume: ${{ vars.AWS_ARTIFACT_VERIFIER_ROLE_ARN }}
           role-session-name: stjp-verify-${{ github.run_id }}-${{ matrix.component_id }}
