@@ -23,12 +23,22 @@ postgres-data/
 .venv-checkov/
 .venv-checkov/
 
-# Terraform working files
+# Terraform working directories
 **/.terraform/
+
+# Terraform state
 *.tfstate
 *.tfstate.*
 *.tfplan
+
+#Local Terraform values/backend config
 *.tfvars
+*.tfvars.json
+backend.hcl
 
 # Keep templates
 !*.tfvars.example
+!backend.hcl.example
+
+# Local security scan output
+checkov-terraform-results/
