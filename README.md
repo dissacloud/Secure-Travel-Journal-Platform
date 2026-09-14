@@ -31,7 +31,11 @@ Secure AWS networking, EKS, database, and runtime controls are being implemented
 
 ## Architecture
 
+![Secure Travel Journal Platform - High-Level Architecture](docs/architecture/diagrams/high-level-architecture.png)
+
 ### Software Supply Chain
+
+![Secure Travel Journal Platform - Trusted Software Supply Chain](docs/architecture/diagrams/trusted-software-supply-chain.png)
 
 ```text
 Developer
@@ -207,6 +211,10 @@ Full evidence:
 ---
 
 ## Phase 4 — Secure AWS Runtime
+
+### AWS Network Topology
+
+![Secure Travel Journal Platform - AWS Network Topology](docs/architecture/diagrams/aws-network-topology.png)
 
 Phase 4 extends the trusted software-supply-chain architecture into the AWS runtime.
 
