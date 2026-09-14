@@ -264,36 +264,6 @@ jobs:
 
           echo "Published digest verified."
 
-      - name: Publish trusted-build summary
-        shell: bash
-        env:
-          COMPONENT: ${{ matrix.component }}
-          IMAGE_TAG: ${{ steps.metadata.outputs.image_tag }}
-          IMAGE_REF: ${{ steps.metadata.outputs.image_ref }}
-          LOCAL_IMAGE_ID: ${{ steps.local-image.outputs.image_id }}
-          DIGEST: ${{ steps.digest.outputs.digest }}
-          DIGEST_REF: ${{ steps.digest.outputs.digest_ref }}
-          SPDX_SHA256: ${{ steps.sbom-hashes.outputs.spdx_sha256 }}
-          CYCLONEDX_SHA256: ${{ steps.sbom-hashes.outputs.cyclonedx_sha256 }}
-        run: |
-          {
-            echo "## ${COMPONENT} trusted artifact"
-            echo
-            echo "| Attribute | Value |"
-            echo "|---|---|"
-            echo "| Commit | \`${GITHUB_SHA}\` |"
-            echo "| Tag | \`${IMAGE_TAG}\` |"
-            echo "| Local image ID | \`${LOCAL_IMAGE_ID}\` |"
-            echo "| ECR digest | \`${DIGEST}\` |"
-            echo "| Immutable reference | \`${DIGEST_REF}\` |"
-            echo "| SPDX SBOM | \`${COMPONENT_ID}.spdx.json\` |"
-            echo "| SPDX SHA256 | \`${SPDX_SHA256}\` |"
-            echo "| CycloneDX SBOM | \`${COMPONENT_ID}.cyclonedx.json\` |"
-            echo "| CycloneDX SHA256 | \`${CYCLONEDX_SHA256}\` |"
-            echo
-            echo "The image was built once, scanned before publication, and pushed only after the security gate passed."
-          } >> "$GITHUB_STEP_SUMMARY"
-
       - name: Prepare SBOM workspace
         shell: bash
         run: |
@@ -538,6 +508,7 @@ jobs:
           jq . "sbom/${COMPONENT_ID}.sbom-metadata.json"
 
       - name: Upload SBOM bundle
+
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: trusted-sbom-${{ matrix.component_id }}-${{ github.sha }}
@@ -548,6 +519,44 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
+      - name: Publish trusted-build summary
+        shell: bash
+        env:
+          COMPONENT: ${{ matrix.component }}
+          COMPONENT_ID: ${{ matrix.component_id }}
+          IMAGE_TAG: ${{ steps.metadata.outputs.image_tag }}
+          LOCAL_IMAGE_ID: ${{ steps.local-image.outputs.image_id }}
+          DIGEST: ${{ steps.digest.outputs.digest }}
+          DIGEST_REF: ${{ steps.digest.outputs.digest_ref }}
+          SPDX_SHA256: ${{ steps.sbom-hashes.outputs.spdx_sha256 }}
+          CYCLONEDX_SHA256: ${{ steps.sbom-hashes.outputs.cyclonedx_sha256 }}
+        run: |
+          set -euo pipefail
+
+          {
+            echo "## ${COMPONENT} trusted artifact"
+            echo
+            echo "| Attribute | Value |"
+            echo "|---|---|"
+            echo "| Source commit | \`${GITHUB_SHA}\` |"
+            echo "| Image tag | \`${IMAGE_TAG}\` |"
+            echo "| Local image ID | \`${LOCAL_IMAGE_ID}\` |"
+            echo "| ECR digest | \`${DIGEST}\` |"
+            echo "| Immutable reference | \`${DIGEST_REF}\` |"
+            echo "| SPDX SBOM | \`${COMPONENT_ID}.spdx.json\` |"
+            echo "| SPDX SHA256 | \`${SPDX_SHA256}\` |"
+            echo "| CycloneDX SBOM | \`${COMPONENT_ID}.cyclonedx.json\` |"
+            echo "| CycloneDX SHA256 | \`${CYCLONEDX_SHA256}\` |"
+            echo "| Cosign signature | ✅ Created |"
+            echo "| SLSA provenance | ✅ Created |"
+            echo "| SBOM attestations | ✅ Created |"
+            echo
+            echo "**Artifact-production status:** COMPLETE"
+            echo
+            echo "The artifact was built once, vulnerability-gated before publication,"
+            echo "published by immutable digest, signed, attested, and accompanied by"
+            echo "validated SPDX and CycloneDX SBOM evidence."
+          } >> "$GITHUB_STEP_SUMMARY"
 
   verify-trusted-artifact:
     name: Verify Trusted Artifact — ${{ matrix.component }}
