@@ -780,41 +780,35 @@ This project addresses both sides of that boundary.
 ```text
 Secure-Travel-Journal-Platform/
 │
-├── backend/
-│   └── Backend application
+├── .github/
+│   └── workflows/
+│       ├── pr-ci.yml
+│       └── trusted-build.yml
 │
-├── frontend/
-│   └── Frontend application
+├── application/
+│   ├── backend/
+│   └── frontend/
 │
 ├── infrastructure/
-│   ├── bootstrap/
-│   │   └── Terraform state infrastructure
-│   │
-│   └── terraform/
-│       └── AWS infrastructure
+│   └── bootstrap/
+│       ├── terraform-state/
+│       └── trusted-build/
 │
-├── .github/
-│   ├── workflows/
-│   │   ├── pr-ci.yml
-│   │   └── trusted-build.yml
-│   │
-│   └── dependabot.yml
+├── platform/
+│   └── ...
+│
+├── scripts/
+│   └── security/
+│
+├── tests/
 │
 ├── docs/
 │   ├── architecture/
-│   │   ├── diagrams/
-│   │   └── trusted-software-supply-chain.md
-│   │
 │   ├── evidence/
-│   │   ├── phase-1/
-│   │   ├── phase-2/
-│   │   ├── phase-3/
-│   │   └── phase-4/
-│   │
 │   └── runbooks/
 │
 ├── docker-compose.yml
-│
+├── SECURITY.md
 └── README.md
 ```
 
