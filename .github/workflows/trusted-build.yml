@@ -59,7 +59,7 @@ jobs:
           persist-credentials: false
 
       - name: Configure short-lived AWS credentials
-        uses: aws-actions/configure-aws-credentials@cbe3b392738ccf3f987d68400dafcf4b0624a56c # v6.2.4
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
         with:
           role-to-assume: ${{ vars.AWS_TRUSTED_BUILD_ROLE_ARN }}
           role-session-name: stjp-build-${{ github.run_id }}-${{ matrix.component_id }}
@@ -591,7 +591,7 @@ jobs:
           persist-credentials: false
 
       - name: Configure read-only AWS credentials
-        uses: aws-actions/configure-aws-credentials@cbe3b392738ccf3f987d68400dafcf4b0624a56c # v6.2.4
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
         with:
           role-to-assume: ${{ vars.AWS_ARTIFACT_VERIFIER_ROLE_ARN }}
           role-session-name: stjp-verify-${{ github.run_id }}-${{ matrix.component_id }}
