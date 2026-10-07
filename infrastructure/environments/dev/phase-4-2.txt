@@ -1,0 +1,729 @@
+
+Terraform used the selected providers to generate the following execution
+plan. Resource actions are indicated with the following symbols:
+  + create
+ <= read (data resources)
+
+Terraform will perform the following actions:
+
+  # module.network.data.aws_iam_policy_document.flow_logs_publish will be read during apply
+  # (config refers to values not yet known)
+ <= data "aws_iam_policy_document" "flow_logs_publish" {
+      + id            = (known after apply)
+      + json          = (known after apply)
+      + minified_json = (known after apply)
+
+      + statement {
+          + actions   = [
+              + "logs:CreateLogStream",
+              + "logs:PutLogEvents",
+            ]
+          + effect    = "Allow"
+          + resources = [
+              + (known after apply),
+            ]
+          + sid       = "PublishVPCFlowLogs"
+        }
+    }
+
+  # module.network.aws_cloudwatch_log_group.vpc_flow_logs will be created
+  + resource "aws_cloudwatch_log_group" "vpc_flow_logs" {
+      + arn                         = (known after apply)
+      + deletion_protection_enabled = (known after apply)
+      + id                          = (known after apply)
+      + kms_key_id                  = (known after apply)
+      + log_group_class             = (known after apply)
+      + name                        = "/aws/vpc/secure-travel-journal-dev/flow-logs"
+      + name_prefix                 = (known after apply)
+      + region                      = "eu-west-2"
+      + retention_in_days           = 365
+      + skip_destroy                = false
+      + tags                        = {
+          + "Name" = "secure-travel-journal-dev-vpc-flow-logs"
+        }
+      + tags_all                    = {
+          + "Environment" = "dev"
+          + "ManagedBy"   = "Terraform"
+          + "Name"        = "secure-travel-journal-dev-vpc-flow-logs"
+          + "Project"     = "SecureTravelJournal"
+          + "Repository"  = "Secure-Travel-Journal-Platform"
+        }
+    }
+
+  # module.network.aws_default_security_group.this will be created
+  + resource "aws_default_security_group" "this" {
+      + arn                    = (known after apply)
+      + description            = (known after apply)
+      + egress                 = []
+      + id                     = (known after apply)
+      + ingress                = []
+      + name                   = (known after apply)
+      + name_prefix            = (known after apply)
+      + owner_id               = (known after apply)
+      + region                 = "eu-west-2"
+      + revoke_rules_on_delete = false
+      + tags                   = {
+          + "Name" = "secure-travel-journal-dev-default-sg-restricted"
+        }
+      + tags_all               = {
+          + "Environment" = "dev"
+          + "ManagedBy"   = "Terraform"
+          + "Name"        = "secure-travel-journal-dev-default-sg-restricted"
+          + "Project"     = "SecureTravelJournal"
+          + "Repository"  = "Secure-Travel-Journal-Platform"
+        }
+      + vpc_id                 = (known after apply)
+    }
+
+  # module.network.aws_flow_log.this will be created
+  + resource "aws_flow_log" "this" {
+      + arn                      = (known after apply)
+      + iam_role_arn             = (known after apply)
+      + id                       = (known after apply)
+      + log_destination          = (known after apply)
+      + log_destination_type     = "cloud-watch-logs"
+      + log_format               = (known after apply)
+      + max_aggregation_interval = 60
+      + region                   = "eu-west-2"
+      + tags                     = {
+          + "Name" = "secure-travel-journal-dev-vpc-flow-log"
+        }
+      + tags_all                 = {
+          + "Environment" = "dev"
+          + "ManagedBy"   = "Terraform"
+          + "Name"        = "secure-travel-journal-dev-vpc-flow-log"
+          + "Project"     = "SecureTravelJournal"
+          + "Repository"  = "Secure-Travel-Journal-Platform"
+        }
+      + traffic_type             = "ALL"
+      + vpc_id                   = (known after apply)
+    }
+
+  # module.network.aws_iam_role.flow_logs will be created
+  + resource "aws_iam_role" "flow_logs" {
+      + arn                   = (known after apply)
+      + assume_role_policy    = jsonencode(
+            {
+              + Statement = [
+                  + {
+                      + Action    = "sts:AssumeRole"
+                      + Condition = {
+                          + ArnLike      = {
+                              + "aws:SourceArn" = "arn:aws:ec2:eu-west-2:905418272482:vpc-flow-log/*"
+                            }
+                          + StringEquals = {
+                              + "aws:SourceAccount" = "905418272482"
+                            }
+                        }
+                      + Effect    = "Allow"
+                      + Principal = {
+                          + Service = "vpc-flow-logs.amazonaws.com"
+                        }
+                    },
+                ]
+              + Version   = "2012-10-17"
+            }
+        )
+      + create_date           = (known after apply)
+      + force_detach_policies = false
+      + id                    = (known after apply)
+      + managed_policy_arns   = (known after apply)
+      + max_session_duration  = 3600
+      + name                  = "secure-travel-journal-dev-vpc-flow-logs"
+      + name_prefix           = (known after apply)
+      + path                  = "/"
+      + tags_all              = {
+          + "Environment" = "dev"
+          + "ManagedBy"   = "Terraform"
+          + "Project"     = "SecureTravelJournal"
+          + "Repository"  = "Secure-Travel-Journal-Platform"
+        }
+      + unique_id             = (known after apply)
+
+      + inline_policy (known after apply)
+    }
+
+  # module.network.aws_iam_role_policy.flow_logs will be created
+  + resource "aws_iam_role_policy" "flow_logs" {
+      + id          = (known after apply)
+      + name        = "secure-travel-journal-dev-vpc-flow-logs"
+      + name_prefix = (known after apply)
+      + policy      = (known after apply)
+      + role        = (known after apply)
+    }
+
+  # module.network.aws_internet_gateway.this will be created
+  + resource "aws_internet_gateway" "this" {
+      + arn      = (known after apply)
+      + id       = (known after apply)
+      + owner_id = (known after apply)
+      + region   = "eu-west-2"
+      + tags     = {
+          + "Name" = "secure-travel-journal-dev-igw"
+        }
+      + tags_all = {
+          + "Environment" = "dev"
+          + "ManagedBy"   = "Terraform"
+          + "Name"        = "secure-travel-journal-dev-igw"
+          + "Project"     = "SecureTravelJournal"
+          + "Repository"  = "Secure-Travel-Journal-Platform"
+        }
+      + vpc_id   = (known after apply)
+    }
+
+  # module.network.aws_kms_alias.flow_logs will be created
+  + resource "aws_kms_alias" "flow_logs" {
+      + arn            = (known after apply)
+      + id             = (known after apply)
+      + name           = "alias/secure-travel-journal-dev-vpc-flow-logs"
+      + name_prefix    = (known after apply)
+      + region         = "eu-west-2"
+      + target_key_arn = (known after apply)
+      + target_key_id  = (known after apply)
+    }
+
+  # module.network.aws_kms_key.flow_logs will be created
+  + resource "aws_kms_key" "flow_logs" {
+      + arn                                = (known after apply)
+      + bypass_policy_lockout_safety_check = false
+      + customer_master_key_spec           = "SYMMETRIC_DEFAULT"
+      + deletion_window_in_days            = 30
+      + description                        = "KMS key for secure-travel-journal-dev VPC Flow Logs"
+      + enable_key_rotation                = true
+      + id                                 = (known after apply)
+      + is_enabled                         = true
+      + key_id                             = (known after apply)
+      + key_usage                          = "ENCRYPT_DECRYPT"
+      + multi_region                       = (known after apply)
+      + policy                             = jsonencode(
+            {
+              + Statement = [
+                  + {
+                      + Action    = "kms:*"
+                      + Effect    = "Allow"
+                      + Principal = {
+                          + AWS = "arn:aws:iam::905418272482:root"
+                        }
+                      + Resource  = "*"
+                      + Sid       = "EnableAccountAdministration"
+                    },
+                  + {
+                      + Action    = [
+                          + "kms:ReEncrypt*",
+                          + "kms:GenerateDataKey*",
+                          + "kms:Encrypt*",
+                          + "kms:Describe*",
+                          + "kms:Decrypt*",
+                        ]
+                      + Condition = {
+                          + ArnLike = {
+                              + "kms:EncryptionContext:aws:logs:arn" = "arn:aws:logs:eu-west-2:905418272482:log-group:/aws/vpc/secure-travel-journal-dev/flow-logs*"
+                            }
+                        }
+                      + Effect    = "Allow"
+                      + Principal = {
+                          + Service = "logs.eu-west-2.amazonaws.com"
+                        }
+                      + Resource  = "*"
+                      + Sid       = "AllowCloudWatchLogs"
+                    },
+                ]
+              + Version   = "2012-10-17"
+            }
+        )
+      + region                             = "eu-west-2"
+      + rotation_period_in_days            = (known after apply)
+      + tags                               = {
+          + "Name" = "secure-travel-journal-dev-flow-logs"
+        }
+      + tags_all                           = {
+          + "Environment" = "dev"
+          + "ManagedBy"   = "Terraform"
+          + "Name"        = "secure-travel-journal-dev-flow-logs"
+          + "Project"     = "SecureTravelJournal"
+          + "Repository"  = "Secure-Travel-Journal-Platform"
+        }
+    }
+
+  # module.network.aws_nat_gateway.this will be created
+  + resource "aws_nat_gateway" "this" {
+      + association_id                     = (known after apply)
+      + auto_provision_zones               = (known after apply)
+      + auto_scaling_ips                   = (known after apply)
+      + availability_mode                  = "regional"
+      + connectivity_type                  = "public"
+      + id                                 = (known after apply)
+      + network_interface_id               = (known after apply)
+      + private_ip                         = (known after apply)
+      + public_ip                          = (known after apply)
+      + region                             = "eu-west-2"
+      + regional_nat_gateway_address       = (known after apply)
+      + regional_nat_gateway_auto_mode     = (known after apply)
+      + route_table_id                     = (known after apply)
+      + secondary_allocation_ids           = (known after apply)
+      + secondary_private_ip_address_count = (known after apply)
+      + secondary_private_ip_addresses     = (known after apply)
+      + tags                               = {
+          + "Name" = "secure-travel-journal-dev-regional-nat"
+        }
+      + tags_all                           = {
+          + "Environment" = "dev"
+          + "ManagedBy"   = "Terraform"
+          + "Name"        = "secure-travel-journal-dev-regional-nat"
+          + "Project"     = "SecureTravelJournal"
+          + "Repository"  = "Secure-Travel-Journal-Platform"
+        }
+      + vpc_id                             = (known after apply)
+    }
+
+  # module.network.aws_route.private_internet["eu-west-2a"] will be created
+  + resource "aws_route" "private_internet" {
+      + destination_cidr_block = "0.0.0.0/0"
+      + id                     = (known after apply)
+      + instance_id            = (known after apply)
+      + instance_owner_id      = (known after apply)
+      + nat_gateway_id         = (known after apply)
+      + network_interface_id   = (known after apply)
+      + origin                 = (known after apply)
+      + region                 = "eu-west-2"
+      + route_table_id         = (known after apply)
+      + state                  = (known after apply)
+    }
+
+  # module.network.aws_route.private_internet["eu-west-2b"] will be created
+  + resource "aws_route" "private_internet" {
+      + destination_cidr_block = "0.0.0.0/0"
+      + id                     = (known after apply)
+      + instance_id            = (known after apply)
+      + instance_owner_id      = (known after apply)
+      + nat_gateway_id         = (known after apply)
+      + network_interface_id   = (known after apply)
+      + origin                 = (known after apply)
+      + region                 = "eu-west-2"
+      + route_table_id         = (known after apply)
+      + state                  = (known after apply)
+    }
+
+  # module.network.aws_route.public_internet will be created
+  + resource "aws_route" "public_internet" {
+      + destination_cidr_block = "0.0.0.0/0"
+      + gateway_id             = (known after apply)
+      + id                     = (known after apply)
+      + instance_id            = (known after apply)
+      + instance_owner_id      = (known after apply)
+      + network_interface_id   = (known after apply)
+      + origin                 = (known after apply)
+      + region                 = "eu-west-2"
+      + route_table_id         = (known after apply)
+      + state                  = (known after apply)
+    }
+
+  # module.network.aws_route_table.database["eu-west-2a"] will be created
+  + resource "aws_route_table" "database" {
+      + arn              = (known after apply)
+      + id               = (known after apply)
+      + owner_id         = (known after apply)
+      + propagating_vgws = (known after apply)
+      + region           = "eu-west-2"
+      + route            = (known after apply)
+      + tags             = {
+          + "Name" = "secure-travel-journal-dev-database-eu-west-2a-rt"
+        }
+      + tags_all         = {
+          + "Environment" = "dev"
+          + "ManagedBy"   = "Terraform"
+          + "Name"        = "secure-travel-journal-dev-database-eu-west-2a-rt"
+          + "Project"     = "SecureTravelJournal"
+          + "Repository"  = "Secure-Travel-Journal-Platform"
+        }
+      + vpc_id           = (known after apply)
+    }
+
+  # module.network.aws_route_table.database["eu-west-2b"] will be created
+  + resource "aws_route_table" "database" {
+      + arn              = (known after apply)
+      + id               = (known after apply)
+      + owner_id         = (known after apply)
+      + propagating_vgws = (known after apply)
+      + region           = "eu-west-2"
+      + route            = (known after apply)
+      + tags             = {
+          + "Name" = "secure-travel-journal-dev-database-eu-west-2b-rt"
+        }
+      + tags_all         = {
+          + "Environment" = "dev"
+          + "ManagedBy"   = "Terraform"
+          + "Name"        = "secure-travel-journal-dev-database-eu-west-2b-rt"
+          + "Project"     = "SecureTravelJournal"
+          + "Repository"  = "Secure-Travel-Journal-Platform"
+        }
+      + vpc_id           = (known after apply)
+    }
+
+  # module.network.aws_route_table.private["eu-west-2a"] will be created
+  + resource "aws_route_table" "private" {
+      + arn              = (known after apply)
+      + id               = (known after apply)
+      + owner_id         = (known after apply)
+      + propagating_vgws = (known after apply)
+      + region           = "eu-west-2"
+      + route            = (known after apply)
+      + tags             = {
+          + "Name" = "secure-travel-journal-dev-private-eu-west-2a-rt"
+        }
+      + tags_all         = {
+          + "Environment" = "dev"
+          + "ManagedBy"   = "Terraform"
+          + "Name"        = "secure-travel-journal-dev-private-eu-west-2a-rt"
+          + "Project"     = "SecureTravelJournal"
+          + "Repository"  = "Secure-Travel-Journal-Platform"
+        }
+      + vpc_id           = (known after apply)
+    }
+
+  # module.network.aws_route_table.private["eu-west-2b"] will be created
+  + resource "aws_route_table" "private" {
+      + arn              = (known after apply)
+      + id               = (known after apply)
+      + owner_id         = (known after apply)
+      + propagating_vgws = (known after apply)
+      + region           = "eu-west-2"
+      + route            = (known after apply)
+      + tags             = {
+          + "Name" = "secure-travel-journal-dev-private-eu-west-2b-rt"
+        }
+      + tags_all         = {
+          + "Environment" = "dev"
+          + "ManagedBy"   = "Terraform"
+          + "Name"        = "secure-travel-journal-dev-private-eu-west-2b-rt"
+          + "Project"     = "SecureTravelJournal"
+          + "Repository"  = "Secure-Travel-Journal-Platform"
+        }
+      + vpc_id           = (known after apply)
+    }
+
+  # module.network.aws_route_table.public will be created
+  + resource "aws_route_table" "public" {
+      + arn              = (known after apply)
+      + id               = (known after apply)
+      + owner_id         = (known after apply)
+      + propagating_vgws = (known after apply)
+      + region           = "eu-west-2"
+      + route            = (known after apply)
+      + tags             = {
+          + "Name" = "secure-travel-journal-dev-public-rt"
+        }
+      + tags_all         = {
+          + "Environment" = "dev"
+          + "ManagedBy"   = "Terraform"
+          + "Name"        = "secure-travel-journal-dev-public-rt"
+          + "Project"     = "SecureTravelJournal"
+          + "Repository"  = "Secure-Travel-Journal-Platform"
+        }
+      + vpc_id           = (known after apply)
+    }
+
+  # module.network.aws_route_table_association.database["eu-west-2a"] will be created
+  + resource "aws_route_table_association" "database" {
+      + id             = (known after apply)
+      + region         = "eu-west-2"
+      + route_table_id = (known after apply)
+      + subnet_id      = (known after apply)
+    }
+
+  # module.network.aws_route_table_association.database["eu-west-2b"] will be created
+  + resource "aws_route_table_association" "database" {
+      + id             = (known after apply)
+      + region         = "eu-west-2"
+      + route_table_id = (known after apply)
+      + subnet_id      = (known after apply)
+    }
+
+  # module.network.aws_route_table_association.private["eu-west-2a"] will be created
+  + resource "aws_route_table_association" "private" {
+      + id             = (known after apply)
+      + region         = "eu-west-2"
+      + route_table_id = (known after apply)
+      + subnet_id      = (known after apply)
+    }
+
+  # module.network.aws_route_table_association.private["eu-west-2b"] will be created
+  + resource "aws_route_table_association" "private" {
+      + id             = (known after apply)
+      + region         = "eu-west-2"
+      + route_table_id = (known after apply)
+      + subnet_id      = (known after apply)
+    }
+
+  # module.network.aws_route_table_association.public["eu-west-2a"] will be created
+  + resource "aws_route_table_association" "public" {
+      + id             = (known after apply)
+      + region         = "eu-west-2"
+      + route_table_id = (known after apply)
+      + subnet_id      = (known after apply)
+    }
+
+  # module.network.aws_route_table_association.public["eu-west-2b"] will be created
+  + resource "aws_route_table_association" "public" {
+      + id             = (known after apply)
+      + region         = "eu-west-2"
+      + route_table_id = (known after apply)
+      + subnet_id      = (known after apply)
+    }
+
+  # module.network.aws_subnet.database["eu-west-2a"] will be created
+  + resource "aws_subnet" "database" {
+      + arn                                            = (known after apply)
+      + assign_ipv6_address_on_creation                = false
+      + availability_zone                              = "eu-west-2a"
+      + availability_zone_id                           = (known after apply)
+      + cidr_block                                     = "10.40.2.0/24"
+      + enable_dns64                                   = false
+      + enable_resource_name_dns_a_record_on_launch    = false
+      + enable_resource_name_dns_aaaa_record_on_launch = false
+      + id                                             = (known after apply)
+      + ipv6_cidr_block                                = (known after apply)
+      + ipv6_cidr_block_association_id                 = (known after apply)
+      + ipv6_native                                    = false
+      + map_public_ip_on_launch                        = false
+      + owner_id                                       = (known after apply)
+      + private_dns_hostname_type_on_launch            = (known after apply)
+      + region                                         = "eu-west-2"
+      + tags                                           = {
+          + "Name" = "secure-travel-journal-dev-database-eu-west-2a"
+          + "Tier" = "database"
+        }
+      + tags_all                                       = {
+          + "Environment" = "dev"
+          + "ManagedBy"   = "Terraform"
+          + "Name"        = "secure-travel-journal-dev-database-eu-west-2a"
+          + "Project"     = "SecureTravelJournal"
+          + "Repository"  = "Secure-Travel-Journal-Platform"
+          + "Tier"        = "database"
+        }
+      + vpc_id                                         = (known after apply)
+    }
+
+  # module.network.aws_subnet.database["eu-west-2b"] will be created
+  + resource "aws_subnet" "database" {
+      + arn                                            = (known after apply)
+      + assign_ipv6_address_on_creation                = false
+      + availability_zone                              = "eu-west-2b"
+      + availability_zone_id                           = (known after apply)
+      + cidr_block                                     = "10.40.3.0/24"
+      + enable_dns64                                   = false
+      + enable_resource_name_dns_a_record_on_launch    = false
+      + enable_resource_name_dns_aaaa_record_on_launch = false
+      + id                                             = (known after apply)
+      + ipv6_cidr_block                                = (known after apply)
+      + ipv6_cidr_block_association_id                 = (known after apply)
+      + ipv6_native                                    = false
+      + map_public_ip_on_launch                        = false
+      + owner_id                                       = (known after apply)
+      + private_dns_hostname_type_on_launch            = (known after apply)
+      + region                                         = "eu-west-2"
+      + tags                                           = {
+          + "Name" = "secure-travel-journal-dev-database-eu-west-2b"
+          + "Tier" = "database"
+        }
+      + tags_all                                       = {
+          + "Environment" = "dev"
+          + "ManagedBy"   = "Terraform"
+          + "Name"        = "secure-travel-journal-dev-database-eu-west-2b"
+          + "Project"     = "SecureTravelJournal"
+          + "Repository"  = "Secure-Travel-Journal-Platform"
+          + "Tier"        = "database"
+        }
+      + vpc_id                                         = (known after apply)
+    }
+
+  # module.network.aws_subnet.private["eu-west-2a"] will be created
+  + resource "aws_subnet" "private" {
+      + arn                                            = (known after apply)
+      + assign_ipv6_address_on_creation                = false
+      + availability_zone                              = "eu-west-2a"
+      + availability_zone_id                           = (known after apply)
+      + cidr_block                                     = "10.40.16.0/20"
+      + enable_dns64                                   = false
+      + enable_resource_name_dns_a_record_on_launch    = false
+      + enable_resource_name_dns_aaaa_record_on_launch = false
+      + id                                             = (known after apply)
+      + ipv6_cidr_block                                = (known after apply)
+      + ipv6_cidr_block_association_id                 = (known after apply)
+      + ipv6_native                                    = false
+      + map_public_ip_on_launch                        = false
+      + owner_id                                       = (known after apply)
+      + private_dns_hostname_type_on_launch            = (known after apply)
+      + region                                         = "eu-west-2"
+      + tags                                           = {
+          + "Name"                            = "secure-travel-journal-dev-private-eu-west-2a"
+          + "Tier"                            = "private"
+          + "kubernetes.io/role/internal-elb" = "1"
+        }
+      + tags_all                                       = {
+          + "Environment"                     = "dev"
+          + "ManagedBy"                       = "Terraform"
+          + "Name"                            = "secure-travel-journal-dev-private-eu-west-2a"
+          + "Project"                         = "SecureTravelJournal"
+          + "Repository"                      = "Secure-Travel-Journal-Platform"
+          + "Tier"                            = "private"
+          + "kubernetes.io/role/internal-elb" = "1"
+        }
+      + vpc_id                                         = (known after apply)
+    }
+
+  # module.network.aws_subnet.private["eu-west-2b"] will be created
+  + resource "aws_subnet" "private" {
+      + arn                                            = (known after apply)
+      + assign_ipv6_address_on_creation                = false
+      + availability_zone                              = "eu-west-2b"
+      + availability_zone_id                           = (known after apply)
+      + cidr_block                                     = "10.40.32.0/20"
+      + enable_dns64                                   = false
+      + enable_resource_name_dns_a_record_on_launch    = false
+      + enable_resource_name_dns_aaaa_record_on_launch = false
+      + id                                             = (known after apply)
+      + ipv6_cidr_block                                = (known after apply)
+      + ipv6_cidr_block_association_id                 = (known after apply)
+      + ipv6_native                                    = false
+      + map_public_ip_on_launch                        = false
+      + owner_id                                       = (known after apply)
+      + private_dns_hostname_type_on_launch            = (known after apply)
+      + region                                         = "eu-west-2"
+      + tags                                           = {
+          + "Name"                            = "secure-travel-journal-dev-private-eu-west-2b"
+          + "Tier"                            = "private"
+          + "kubernetes.io/role/internal-elb" = "1"
+        }
+      + tags_all                                       = {
+          + "Environment"                     = "dev"
+          + "ManagedBy"                       = "Terraform"
+          + "Name"                            = "secure-travel-journal-dev-private-eu-west-2b"
+          + "Project"                         = "SecureTravelJournal"
+          + "Repository"                      = "Secure-Travel-Journal-Platform"
+          + "Tier"                            = "private"
+          + "kubernetes.io/role/internal-elb" = "1"
+        }
+      + vpc_id                                         = (known after apply)
+    }
+
+  # module.network.aws_subnet.public["eu-west-2a"] will be created
+  + resource "aws_subnet" "public" {
+      + arn                                            = (known after apply)
+      + assign_ipv6_address_on_creation                = false
+      + availability_zone                              = "eu-west-2a"
+      + availability_zone_id                           = (known after apply)
+      + cidr_block                                     = "10.40.0.0/24"
+      + enable_dns64                                   = false
+      + enable_resource_name_dns_a_record_on_launch    = false
+      + enable_resource_name_dns_aaaa_record_on_launch = false
+      + id                                             = (known after apply)
+      + ipv6_cidr_block                                = (known after apply)
+      + ipv6_cidr_block_association_id                 = (known after apply)
+      + ipv6_native                                    = false
+      + map_public_ip_on_launch                        = false
+      + owner_id                                       = (known after apply)
+      + private_dns_hostname_type_on_launch            = (known after apply)
+      + region                                         = "eu-west-2"
+      + tags                                           = {
+          + "Name"                   = "secure-travel-journal-dev-public-eu-west-2a"
+          + "Tier"                   = "public"
+          + "kubernetes.io/role/elb" = "1"
+        }
+      + tags_all                                       = {
+          + "Environment"            = "dev"
+          + "ManagedBy"              = "Terraform"
+          + "Name"                   = "secure-travel-journal-dev-public-eu-west-2a"
+          + "Project"                = "SecureTravelJournal"
+          + "Repository"             = "Secure-Travel-Journal-Platform"
+          + "Tier"                   = "public"
+          + "kubernetes.io/role/elb" = "1"
+        }
+      + vpc_id                                         = (known after apply)
+    }
+
+  # module.network.aws_subnet.public["eu-west-2b"] will be created
+  + resource "aws_subnet" "public" {
+      + arn                                            = (known after apply)
+      + assign_ipv6_address_on_creation                = false
+      + availability_zone                              = "eu-west-2b"
+      + availability_zone_id                           = (known after apply)
+      + cidr_block                                     = "10.40.1.0/24"
+      + enable_dns64                                   = false
+      + enable_resource_name_dns_a_record_on_launch    = false
+      + enable_resource_name_dns_aaaa_record_on_launch = false
+      + id                                             = (known after apply)
+      + ipv6_cidr_block                                = (known after apply)
+      + ipv6_cidr_block_association_id                 = (known after apply)
+      + ipv6_native                                    = false
+      + map_public_ip_on_launch                        = false
+      + owner_id                                       = (known after apply)
+      + private_dns_hostname_type_on_launch            = (known after apply)
+      + region                                         = "eu-west-2"
+      + tags                                           = {
+          + "Name"                   = "secure-travel-journal-dev-public-eu-west-2b"
+          + "Tier"                   = "public"
+          + "kubernetes.io/role/elb" = "1"
+        }
+      + tags_all                                       = {
+          + "Environment"            = "dev"
+          + "ManagedBy"              = "Terraform"
+          + "Name"                   = "secure-travel-journal-dev-public-eu-west-2b"
+          + "Project"                = "SecureTravelJournal"
+          + "Repository"             = "Secure-Travel-Journal-Platform"
+          + "Tier"                   = "public"
+          + "kubernetes.io/role/elb" = "1"
+        }
+      + vpc_id                                         = (known after apply)
+    }
+
+  # module.network.aws_vpc.this will be created
+  + resource "aws_vpc" "this" {
+      + arn                                  = (known after apply)
+      + cidr_block                           = "10.40.0.0/16"
+      + default_network_acl_id               = (known after apply)
+      + default_route_table_id               = (known after apply)
+      + default_security_group_id            = (known after apply)
+      + dhcp_options_id                      = (known after apply)
+      + enable_dns_hostnames                 = true
+      + enable_dns_support                   = true
+      + enable_network_address_usage_metrics = (known after apply)
+      + id                                   = (known after apply)
+      + instance_tenancy                     = "default"
+      + ipv6_association_id                  = (known after apply)
+      + ipv6_cidr_block                      = (known after apply)
+      + ipv6_cidr_block_network_border_group = (known after apply)
+      + main_route_table_id                  = (known after apply)
+      + owner_id                             = (known after apply)
+      + region                               = "eu-west-2"
+      + tags                                 = {
+          + "Name" = "secure-travel-journal-dev-vpc"
+        }
+      + tags_all                             = {
+          + "Environment" = "dev"
+          + "ManagedBy"   = "Terraform"
+          + "Name"        = "secure-travel-journal-dev-vpc"
+          + "Project"     = "SecureTravelJournal"
+          + "Repository"  = "Secure-Travel-Journal-Platform"
+        }
+    }
+
+Plan: 30 to add, 0 to change, 0 to destroy.
+
+Changes to Outputs:
+  + database_subnet_ids = [
+      + (known after apply),
+      + (known after apply),
+    ]
+  + nat_gateway_id      = (known after apply)
+  + private_subnet_ids  = [
+      + (known after apply),
+      + (known after apply),
+    ]
+  + public_subnet_ids   = [
+      + (known after apply),
+      + (known after apply),
+    ]
+  + vpc_cidr            = "10.40.0.0/16"
+  + vpc_flow_log_group  = "/aws/vpc/secure-travel-journal-dev/flow-logs"
+  + vpc_id              = (known after apply)

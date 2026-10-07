@@ -1,0 +1,75 @@
+Secure Travel Journal Platform
+Trusted Artifact Verification Record
+=====================================
+
+Source repository: dissacloud/Secure-Travel-Journal-Platform
+Source commit:     24cd554eba18c6013c939cf78687e8cab38b2345
+Source ref:        refs/heads/main
+
+Backend:
+905418272482.dkr.ecr.eu-west-2.amazonaws.com/secure-travel-journal/backend@sha256:40d7b5f8a9ff04fbce3a6ffbf2f4836d168ad28cfc28999a20c5cae0c89c6a13
+
+Frontend:
+905418272482.dkr.ecr.eu-west-2.amazonaws.com/secure-travel-journal/frontend@sha256:9b43dfa2fa715818b6d79a5f568d969d6845db6583d1beebba1ee23c1f4ba2a5
+
+Generated UTC:
+2026-09-07T11:35:27Z
+
+=== Trusted artifact verification ===
+Artifact: 905418272482.dkr.ecr.eu-west-2.amazonaws.com/secure-travel-journal/backend@sha256:40d7b5f8a9ff04fbce3a6ffbf2f4836d168ad28cfc28999a20c5cae0c89c6a13
+Repository: dissacloud/Secure-Travel-Journal-Platform
+Source commit: 24cd554eba18c6013c939cf78687e8cab38b2345
+
+=== 1. Verify Cosign signature ===
+
+Verification for 905418272482.dkr.ecr.eu-west-2.amazonaws.com/secure-travel-journal/backend@sha256:40d7b5f8a9ff04fbce3a6ffbf2f4836d168ad28cfc28999a20c5cae0c89c6a13 --
+The following checks were performed on each of these signatures:
+  - The cosign claims were validated
+  - Existence of the claims in the transparency log was verified offline
+  - The code-signing certificate was verified using trusted certificate authority certificates
+Cosign signature verified.
+
+=== 2. Verify SLSA provenance ===
+SLSA provenance verified.
+
+=== 3. Verify SPDX SBOM attestation ===
+SPDX attestation verified.
+
+=== 4. Verify CycloneDX SBOM attestation ===
+CycloneDX attestation verified.
+
+======================================
+TRUSTED ARTIFACT VERIFICATION PASSED
+======================================
+=== Trusted artifact verification ===
+Artifact: 905418272482.dkr.ecr.eu-west-2.amazonaws.com/secure-travel-journal/frontend@sha256:9b43dfa2fa715818b6d79a5f568d969d6845db6583d1beebba1ee23c1f4ba2a5
+Repository: dissacloud/Secure-Travel-Journal-Platform
+Source commit: 24cd554eba18c6013c939cf78687e8cab38b2345
+
+=== 1. Verify Cosign signature ===
+=== Trusted artifact verification ===
+Artifact: 905418272482.dkr.ecr.eu-west-2.amazonaws.com/secure-travel-journal/frontend@sha256:9b43dfa2fa715818b6d79a5f568d969d6845db6583d1beebba1ee23c1f4ba2a5
+Repository: dissacloud/Secure-Travel-Journal-Platform
+Source commit: 24cd554eba18c6013c939cf78687e8cab38b2345
+
+=== 1. Verify Cosign signature ===
+
+Verification for 905418272482.dkr.ecr.eu-west-2.amazonaws.com/secure-travel-journal/frontend@sha256:9b43dfa2fa715818b6d79a5f568d969d6845db6583d1beebba1ee23c1f4ba2a5 --
+The following checks were performed on each of these signatures:
+  - The cosign claims were validated
+  - Existence of the claims in the transparency log was verified offline
+  - The code-signing certificate was verified using trusted certificate authority certificates
+Cosign signature verified.
+
+=== 2. Verify SLSA provenance ===
+SLSA provenance verified.
+
+=== 3. Verify SPDX SBOM attestation ===
+SPDX attestation verified.
+
+=== 4. Verify CycloneDX SBOM attestation ===
+CycloneDX attestation verified.
+
+======================================
+TRUSTED ARTIFACT VERIFICATION PASSED
+======================================
