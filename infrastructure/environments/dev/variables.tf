@@ -102,3 +102,33 @@ variable "eks_deletion_protection" {
   type        = bool
   default     = true
 }
+
+variable "database_engine_version" {
+  description = "RDS PostgreSQL version."
+  type        = string
+  default     = "17.11"
+}
+
+variable "database_instance_class" {
+  description = "RDS instance class."
+  type        = string
+  default     = "db.t4g.micro"
+}
+
+variable "database_port" {
+  description = "PostgreSQL listener port."
+  type        = number
+  default     = 5433
+}
+
+variable "database_multi_az" {
+  description = "Enable RDS Multi-AZ deployment."
+  type        = bool
+  default     = true
+}
+
+variable "database_deletion_protection" {
+  description = "Enable RDS deletion protection."
+  type        = bool
+  default     = true
+}

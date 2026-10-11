@@ -40,3 +40,15 @@ eks_public_access_cidrs = []
 eks_admin_principal_arn = "arn:aws:iam::905418272482:role/aws-reserved/sso.amazonaws.com/eu-west-2/AWSReservedSSO_AWSAdministratorAccess_5fa7f39beba48869"
 
 eks_deletion_protection = true
+
+# PostgreSQL
+
+database_engine_version = "17.11"
+
+database_instance_class = "db.t4g.micro"
+
+database_port = 5433
+
+database_multi_az = true
+
+database_deletion_protection = true
