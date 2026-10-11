@@ -47,3 +47,38 @@ output "vpc_flow_log_group" {
   description = "VPC Flow Log group."
   value       = module.network.flow_log_group_name
 }
+
+output "eks_cluster_name" {
+  description = "Dev EKS cluster name."
+  value       = module.eks.cluster_name
+}
+
+output "eks_cluster_arn" {
+  description = "Dev EKS cluster ARN."
+  value       = module.eks.cluster_arn
+}
+
+output "eks_cluster_version" {
+  description = "Dev Kubernetes version."
+  value       = module.eks.cluster_version
+}
+
+output "eks_cluster_endpoint" {
+  description = "Dev Kubernetes API endpoint."
+  value       = module.eks.cluster_endpoint
+}
+
+output "eks_cluster_security_group_id" {
+  description = "EKS cluster security group."
+  value       = module.eks.cluster_security_group_id
+}
+
+output "eks_cluster_role_arn" {
+  description = "EKS control-plane IAM role."
+  value       = module.eks.cluster_role_arn
+}
+
+output "eks_node_role_arn" {
+  description = "EKS Auto Mode node role."
+  value       = module.eks.node_role_arn
+}

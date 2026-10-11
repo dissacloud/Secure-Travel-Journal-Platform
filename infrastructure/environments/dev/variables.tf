@@ -67,3 +67,38 @@ variable "flow_log_retention_days" {
   type        = number
   default     = 365
 }
+
+variable "eks_cluster_version" {
+  description = "Amazon EKS Kubernetes version."
+  type        = string
+  default     = "1.36"
+}
+
+variable "eks_service_ipv4_cidr" {
+  description = "Kubernetes service network CIDR."
+  type        = string
+  default     = "172.20.0.0/16"
+}
+
+variable "eks_endpoint_public_access" {
+  description = "Enable restricted public access to the Kubernetes API."
+  type        = bool
+  default     = false
+}
+
+variable "eks_public_access_cidrs" {
+  description = "CIDRs allowed to access the EKS public API."
+  type        = list(string)
+  default     = []
+}
+
+variable "eks_admin_principal_arn" {
+  description = "IAM principal granted EKS cluster administration."
+  type        = string
+}
+
+variable "eks_deletion_protection" {
+  description = "Enable EKS deletion protection."
+  type        = bool
+  default     = true
+}
