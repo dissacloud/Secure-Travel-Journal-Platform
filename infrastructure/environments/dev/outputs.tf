@@ -82,3 +82,33 @@ output "eks_node_role_arn" {
   description = "EKS Auto Mode node role."
   value       = module.eks.node_role_arn
 }
+
+output "rds_instance_id" {
+  description = "Dev PostgreSQL RDS instance."
+  value       = module.database.db_instance_id
+}
+
+output "rds_endpoint" {
+  description = "Dev PostgreSQL endpoint."
+  value       = module.database.database_endpoint
+}
+
+output "rds_port" {
+  description = "Dev PostgreSQL port."
+  value       = module.database.database_port
+}
+
+output "rds_master_secret_arn" {
+  description = "Secrets Manager ARN for the RDS bootstrap credential."
+  value       = module.database.master_secret_arn
+}
+
+output "rds_security_group_id" {
+  description = "Security group protecting RDS."
+  value       = module.database.database_security_group_id
+}
+
+output "application_db_client_security_group_id" {
+  description = "Security group future Travel Journal Pods require for database connectivity."
+  value       = module.database.application_db_client_security_group_id
+}

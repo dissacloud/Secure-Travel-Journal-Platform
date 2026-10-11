@@ -48,3 +48,29 @@ module "eks" {
 
   deletion_protection = var.eks_deletion_protection
 }
+
+module "database" {
+  source = "../../modules/database"
+
+  name_prefix = "${var.project_name}-${var.environment}"
+
+  vpc_id = module.network.vpc_id
+
+  database_subnet_ids = module.network.database_subnet_ids
+
+  db_identifier = "${var.project_name}-${var.environment}-postgres"
+
+  database_name = "traveljournal"
+
+  master_username = "stjadmin"
+
+  engine_version = var.database_engine_version
+
+  instance_class = var.database_instance_class
+
+  database_port = var.database_port
+
+  multi_az = var.database_multi_az
+
+  deletion_protection = var.database_deletion_protection
+}
