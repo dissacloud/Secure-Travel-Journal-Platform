@@ -1,0 +1,48 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: backend-required-egress
+  namespace: travel-journal
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: backend
+
+  policyTypes:
+    - Egress
+
+  egress:
+    # CoreDNS
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+
+    # EKS Pod Identity credential endpoint
+    - to:
+        - ipBlock:
+            cidr: 169.254.170.23/32
+      ports:
+        - protocol: TCP
+          port: 80
+        - protocol: TCP
+          port: 2703
+
+    # Isolated database subnets
+    - to:
+        - ipBlock:
+            cidr: 10.40.2.0/24
+        - ipBlock:
+            cidr: 10.40.3.0/24
+      ports:
+        - protocol: TCP
+          port: 5433

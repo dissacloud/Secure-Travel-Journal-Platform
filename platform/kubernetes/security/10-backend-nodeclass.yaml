@@ -1,0 +1,36 @@
+---
+apiVersion: eks.amazonaws.com/v1
+kind: NodeClass
+metadata:
+  name: travel-journal-backend
+spec:
+  role: secure-travel-journal-dev-backend-node-role
+
+  subnetSelectorTerms:
+    - tags:
+        Project: SecureTravelJournal
+        Environment: dev
+        Tier: private
+
+  securityGroupSelectorTerms:
+    - tags:
+        "aws:eks:cluster-name": secure-travel-journal-dev
+
+  podSubnetSelectorTerms:
+    - tags:
+        Project: SecureTravelJournal
+        Environment: dev
+        Tier: private
+
+  podSecurityGroupSelectorTerms:
+    - tags:
+        Purpose: application-database-client
+
+  snatPolicy: Random
+
+  networkPolicy: DefaultDeny
+
+  networkPolicyEventLogs: Enabled
+
+  ephemeralStorage:
+    size: "20Gi"

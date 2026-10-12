@@ -21,3 +21,27 @@ resource "aws_eks_access_policy_association" "administrator" {
     type = "cluster"
   }
 }
+
+resource "aws_eks_access_entry" "backend_node" {
+  cluster_name = aws_eks_cluster.this.name
+
+  principal_arn = aws_iam_role.backend_node.arn
+
+  type = "EC2"
+
+  tags = {
+    Name = "${var.cluster_name}-backend-node"
+  }
+}
+
+resource "aws_eks_access_policy_association" "backend_node" {
+  cluster_name = aws_eks_cluster.this.name
+
+  principal_arn = aws_eks_access_entry.backend_node.principal_arn
+
+  policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSAutoNodePolicy"
+
+  access_scope {
+    type = "cluster"
+  }
+}

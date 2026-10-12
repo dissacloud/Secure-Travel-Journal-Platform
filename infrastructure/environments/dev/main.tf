@@ -73,4 +73,26 @@ module "database" {
   multi_az = var.database_multi_az
 
   deletion_protection = var.database_deletion_protection
+
+  eks_cluster_security_group_id = module.eks.cluster_security_group_id
+}
+
+module "security" {
+  source = "../../modules/security"
+
+  cluster_name = module.eks.cluster_name
+
+  kubernetes_namespace = "travel-journal"
+
+  backend_service_account = "backend"
+
+  database_bootstrap_service_account = "database-bootstrap"
+
+  database_resource_id = module.database.db_resource_id
+
+  application_database_user = "traveljournal_app"
+
+  master_secret_arn = module.database.master_secret_arn
+
+  master_secret_kms_key_arn = module.database.master_secret_kms_key_arn
 }

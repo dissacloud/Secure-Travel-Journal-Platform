@@ -434,13 +434,35 @@ jobs:
 
       - name: Generate Kubernetes security report
         if: steps.kubernetes-target.outputs.present == 'true'
+        shell: bash
         run: |
+          set -euo pipefail
+
           checkov \
             --directory platform/kubernetes \
             --framework kubernetes \
             --soft-fail \
+            --output cli \
             --output sarif \
-            > checkov-kubernetes.sarif
+            --output-file-path console,checkov-kubernetes.sarif
+
+      - name: Validate Kubernetes SARIF
+        if: steps.kubernetes-target.outputs.present == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ ! -s checkov-kubernetes.sarif ]]; then
+            echo "::error::Checkov SARIF report was not created."
+            exit 1
+          fi
+
+          jq -e '
+            .version == "2.1.0"
+            and (.runs | type == "array")
+          ' checkov-kubernetes.sarif >/dev/null
+
+          echo "Checkov Kubernetes SARIF is valid."
 
       - name: Upload Kubernetes findings
         if: steps.kubernetes-target.outputs.present == 'true'

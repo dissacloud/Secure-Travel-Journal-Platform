@@ -47,3 +47,29 @@ resource "aws_vpc_security_group_egress_rule" "application_to_database" {
 
   description = "Application access to PostgreSQL only"
 }
+
+resource "aws_vpc_security_group_egress_rule" "application_dns_udp" {
+  security_group_id = aws_security_group.application_db_client.id
+
+  referenced_security_group_id = var.eks_cluster_security_group_id
+
+  ip_protocol = "udp"
+
+  from_port = 53
+  to_port   = 53
+
+  description = "DNS to EKS cluster workloads"
+}
+
+resource "aws_vpc_security_group_egress_rule" "application_dns_tcp" {
+  security_group_id = aws_security_group.application_db_client.id
+
+  referenced_security_group_id = var.eks_cluster_security_group_id
+
+  ip_protocol = "tcp"
+
+  from_port = 53
+  to_port   = 53
+
+  description = "TCP DNS fallback to EKS cluster workloads"
+}
