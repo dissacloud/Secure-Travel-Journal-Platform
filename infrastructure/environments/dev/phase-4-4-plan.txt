@@ -564,6 +564,46 @@ Terraform will perform the following actions:
       + vpc_id                 = (known after apply)
     }
 
+  # module.database.aws_vpc_security_group_egress_rule.application_dns_tcp will be created
+  + resource "aws_vpc_security_group_egress_rule" "application_dns_tcp" {
+      + arn                          = (known after apply)
+      + description                  = "TCP DNS fallback to EKS cluster workloads"
+      + from_port                    = 53
+      + id                           = (known after apply)
+      + ip_protocol                  = "tcp"
+      + referenced_security_group_id = (known after apply)
+      + region                       = "eu-west-2"
+      + security_group_id            = (known after apply)
+      + security_group_rule_id       = (known after apply)
+      + tags_all                     = {
+          + "Environment" = "dev"
+          + "ManagedBy"   = "Terraform"
+          + "Project"     = "SecureTravelJournal"
+          + "Repository"  = "Secure-Travel-Journal-Platform"
+        }
+      + to_port                      = 53
+    }
+
+  # module.database.aws_vpc_security_group_egress_rule.application_dns_udp will be created
+  + resource "aws_vpc_security_group_egress_rule" "application_dns_udp" {
+      + arn                          = (known after apply)
+      + description                  = "DNS to EKS cluster workloads"
+      + from_port                    = 53
+      + id                           = (known after apply)
+      + ip_protocol                  = "udp"
+      + referenced_security_group_id = (known after apply)
+      + region                       = "eu-west-2"
+      + security_group_id            = (known after apply)
+      + security_group_rule_id       = (known after apply)
+      + tags_all                     = {
+          + "Environment" = "dev"
+          + "ManagedBy"   = "Terraform"
+          + "Project"     = "SecureTravelJournal"
+          + "Repository"  = "Secure-Travel-Journal-Platform"
+        }
+      + to_port                      = 53
+    }
+
   # module.database.aws_vpc_security_group_egress_rule.application_to_database will be created
   + resource "aws_vpc_security_group_egress_rule" "application_to_database" {
       + arn                          = (known after apply)
@@ -652,6 +692,30 @@ Terraform will perform the following actions:
       + user_name         = (known after apply)
     }
 
+  # module.eks.aws_eks_access_entry.backend_node will be created
+  + resource "aws_eks_access_entry" "backend_node" {
+      + access_entry_arn  = (known after apply)
+      + cluster_name      = "secure-travel-journal-dev"
+      + created_at        = (known after apply)
+      + id                = (known after apply)
+      + kubernetes_groups = (known after apply)
+      + modified_at       = (known after apply)
+      + principal_arn     = (known after apply)
+      + region            = "eu-west-2"
+      + tags              = {
+          + "Name" = "secure-travel-journal-dev-backend-node"
+        }
+      + tags_all          = {
+          + "Environment" = "dev"
+          + "ManagedBy"   = "Terraform"
+          + "Name"        = "secure-travel-journal-dev-backend-node"
+          + "Project"     = "SecureTravelJournal"
+          + "Repository"  = "Secure-Travel-Journal-Platform"
+        }
+      + type              = "EC2"
+      + user_name         = (known after apply)
+    }
+
   # module.eks.aws_eks_access_policy_association.administrator will be created
   + resource "aws_eks_access_policy_association" "administrator" {
       + associated_at = (known after apply)
@@ -660,6 +724,21 @@ Terraform will perform the following actions:
       + modified_at   = (known after apply)
       + policy_arn    = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
       + principal_arn = "arn:aws:iam::905418272482:role/aws-reserved/sso.amazonaws.com/eu-west-2/AWSReservedSSO_AWSAdministratorAccess_5fa7f39beba48869"
+      + region        = "eu-west-2"
+
+      + access_scope {
+          + type = "cluster"
+        }
+    }
+
+  # module.eks.aws_eks_access_policy_association.backend_node will be created
+  + resource "aws_eks_access_policy_association" "backend_node" {
+      + associated_at = (known after apply)
+      + cluster_name  = "secure-travel-journal-dev"
+      + id            = (known after apply)
+      + modified_at   = (known after apply)
+      + policy_arn    = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSAutoNodePolicy"
+      + principal_arn = (known after apply)
       + region        = "eu-west-2"
 
       + access_scope {
@@ -757,6 +836,48 @@ Terraform will perform the following actions:
         }
     }
 
+  # module.eks.aws_iam_role.backend_node will be created
+  + resource "aws_iam_role" "backend_node" {
+      + arn                   = (known after apply)
+      + assume_role_policy    = jsonencode(
+            {
+              + Statement = [
+                  + {
+                      + Action    = "sts:AssumeRole"
+                      + Effect    = "Allow"
+                      + Principal = {
+                          + Service = "ec2.amazonaws.com"
+                        }
+                    },
+                ]
+              + Version   = "2012-10-17"
+            }
+        )
+      + create_date           = (known after apply)
+      + force_detach_policies = false
+      + id                    = (known after apply)
+      + managed_policy_arns   = (known after apply)
+      + max_session_duration  = 3600
+      + name                  = "secure-travel-journal-dev-backend-node-role"
+      + name_prefix           = (known after apply)
+      + path                  = "/"
+      + tags                  = {
+          + "Name"    = "secure-travel-journal-dev-backend-node-role"
+          + "Purpose" = "backend-auto-mode"
+        }
+      + tags_all              = {
+          + "Environment" = "dev"
+          + "ManagedBy"   = "Terraform"
+          + "Name"        = "secure-travel-journal-dev-backend-node-role"
+          + "Project"     = "SecureTravelJournal"
+          + "Purpose"     = "backend-auto-mode"
+          + "Repository"  = "Secure-Travel-Journal-Platform"
+        }
+      + unique_id             = (known after apply)
+
+      + inline_policy (known after apply)
+    }
+
   # module.eks.aws_iam_role.cluster will be created
   + resource "aws_iam_role" "cluster" {
       + arn                   = (known after apply)
@@ -838,6 +959,20 @@ Terraform will perform the following actions:
       + unique_id             = (known after apply)
 
       + inline_policy (known after apply)
+    }
+
+  # module.eks.aws_iam_role_policy_attachment.backend_node["arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryPullOnly"] will be created
+  + resource "aws_iam_role_policy_attachment" "backend_node" {
+      + id         = (known after apply)
+      + policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryPullOnly"
+      + role       = "secure-travel-journal-dev-backend-node-role"
+    }
+
+  # module.eks.aws_iam_role_policy_attachment.backend_node["arn:aws:iam::aws:policy/AmazonEKSWorkerNodeMinimalPolicy"] will be created
+  + resource "aws_iam_role_policy_attachment" "backend_node" {
+      + id         = (known after apply)
+      + policy_arn = "arn:aws:iam::aws:policy/AmazonEKSWorkerNodeMinimalPolicy"
+      + role       = "secure-travel-journal-dev-backend-node-role"
     }
 
   # module.eks.aws_iam_role_policy_attachment.cluster["arn:aws:iam::aws:policy/AmazonEKSBlockStoragePolicyV2"] will be created
@@ -1665,38 +1800,270 @@ Terraform will perform the following actions:
         }
     }
 
-Plan: 63 to add, 0 to change, 0 to destroy.
+  # module.security.data.aws_iam_policy_document.backend will be read during apply
+  # (config refers to values not yet known)
+ <= data "aws_iam_policy_document" "backend" {
+      + id            = (known after apply)
+      + json          = (known after apply)
+      + minified_json = (known after apply)
+
+      + statement {
+          + actions   = [
+              + "rds-db:connect",
+            ]
+          + effect    = "Allow"
+          + resources = [
+              + (known after apply),
+            ]
+          + sid       = "ConnectToApplicationDatabase"
+        }
+    }
+
+  # module.security.data.aws_iam_policy_document.database_bootstrap will be read during apply
+  # (config refers to values not yet known)
+ <= data "aws_iam_policy_document" "database_bootstrap" {
+      + id            = (known after apply)
+      + json          = (known after apply)
+      + minified_json = (known after apply)
+
+      + statement {
+          + actions   = [
+              + "secretsmanager:DescribeSecret",
+              + "secretsmanager:GetSecretValue",
+            ]
+          + effect    = "Allow"
+          + resources = [
+              + (known after apply),
+            ]
+          + sid       = "ReadRDSMasterCredential"
+        }
+      + statement {
+          + actions   = [
+              + "kms:Decrypt",
+              + "kms:DescribeKey",
+            ]
+          + effect    = "Allow"
+          + resources = [
+              + (known after apply),
+            ]
+          + sid       = "DecryptRDSMasterCredential"
+
+          + condition {
+              + test     = "StringEquals"
+              + values   = [
+                  + "secretsmanager.eu-west-2.amazonaws.com",
+                ]
+              + variable = "kms:ViaService"
+            }
+        }
+    }
+
+  # module.security.aws_eks_pod_identity_association.backend will be created
+  + resource "aws_eks_pod_identity_association" "backend" {
+      + association_arn      = (known after apply)
+      + association_id       = (known after apply)
+      + cluster_name         = "secure-travel-journal-dev"
+      + disable_session_tags = false
+      + external_id          = (known after apply)
+      + id                   = (known after apply)
+      + namespace            = "travel-journal"
+      + region               = "eu-west-2"
+      + role_arn             = (known after apply)
+      + service_account      = "backend"
+      + tags                 = {
+          + "Name" = "secure-travel-journal-dev-backend"
+        }
+      + tags_all             = {
+          + "Environment" = "dev"
+          + "ManagedBy"   = "Terraform"
+          + "Name"        = "secure-travel-journal-dev-backend"
+          + "Project"     = "SecureTravelJournal"
+          + "Repository"  = "Secure-Travel-Journal-Platform"
+        }
+    }
+
+  # module.security.aws_eks_pod_identity_association.database_bootstrap will be created
+  + resource "aws_eks_pod_identity_association" "database_bootstrap" {
+      + association_arn      = (known after apply)
+      + association_id       = (known after apply)
+      + cluster_name         = "secure-travel-journal-dev"
+      + disable_session_tags = false
+      + external_id          = (known after apply)
+      + id                   = (known after apply)
+      + namespace            = "travel-journal"
+      + region               = "eu-west-2"
+      + role_arn             = (known after apply)
+      + service_account      = "database-bootstrap"
+      + tags                 = {
+          + "Name" = "secure-travel-journal-dev-database-bootstrap"
+        }
+      + tags_all             = {
+          + "Environment" = "dev"
+          + "ManagedBy"   = "Terraform"
+          + "Name"        = "secure-travel-journal-dev-database-bootstrap"
+          + "Project"     = "SecureTravelJournal"
+          + "Repository"  = "Secure-Travel-Journal-Platform"
+        }
+    }
+
+  # module.security.aws_iam_role.backend will be created
+  + resource "aws_iam_role" "backend" {
+      + arn                   = (known after apply)
+      + assume_role_policy    = jsonencode(
+            {
+              + Statement = [
+                  + {
+                      + Action    = [
+                          + "sts:TagSession",
+                          + "sts:AssumeRole",
+                        ]
+                      + Condition = {
+                          + StringEquals = {
+                              + "aws:RequestTag/kubernetes-namespace"       = "travel-journal"
+                              + "aws:RequestTag/kubernetes-service-account" = "backend"
+                            }
+                        }
+                      + Effect    = "Allow"
+                      + Principal = {
+                          + Service = "pods.eks.amazonaws.com"
+                        }
+                      + Sid       = "AllowBackendPodIdentity"
+                    },
+                ]
+              + Version   = "2012-10-17"
+            }
+        )
+      + create_date           = (known after apply)
+      + force_detach_policies = false
+      + id                    = (known after apply)
+      + managed_policy_arns   = (known after apply)
+      + max_session_duration  = 3600
+      + name                  = "secure-travel-journal-dev-backend-pod"
+      + name_prefix           = (known after apply)
+      + path                  = "/"
+      + tags                  = {
+          + "Name"    = "secure-travel-journal-dev-backend-pod"
+          + "Purpose" = "application-runtime"
+        }
+      + tags_all              = {
+          + "Environment" = "dev"
+          + "ManagedBy"   = "Terraform"
+          + "Name"        = "secure-travel-journal-dev-backend-pod"
+          + "Project"     = "SecureTravelJournal"
+          + "Purpose"     = "application-runtime"
+          + "Repository"  = "Secure-Travel-Journal-Platform"
+        }
+      + unique_id             = (known after apply)
+
+      + inline_policy (known after apply)
+    }
+
+  # module.security.aws_iam_role.database_bootstrap will be created
+  + resource "aws_iam_role" "database_bootstrap" {
+      + arn                   = (known after apply)
+      + assume_role_policy    = jsonencode(
+            {
+              + Statement = [
+                  + {
+                      + Action    = [
+                          + "sts:TagSession",
+                          + "sts:AssumeRole",
+                        ]
+                      + Condition = {
+                          + StringEquals = {
+                              + "aws:RequestTag/kubernetes-namespace"       = "travel-journal"
+                              + "aws:RequestTag/kubernetes-service-account" = "database-bootstrap"
+                            }
+                        }
+                      + Effect    = "Allow"
+                      + Principal = {
+                          + Service = "pods.eks.amazonaws.com"
+                        }
+                      + Sid       = "AllowDatabaseBootstrapPodIdentity"
+                    },
+                ]
+              + Version   = "2012-10-17"
+            }
+        )
+      + create_date           = (known after apply)
+      + force_detach_policies = false
+      + id                    = (known after apply)
+      + managed_policy_arns   = (known after apply)
+      + max_session_duration  = 3600
+      + name                  = "secure-travel-journal-dev-database-bootstrap"
+      + name_prefix           = (known after apply)
+      + path                  = "/"
+      + tags                  = {
+          + "Name"    = "secure-travel-journal-dev-database-bootstrap"
+          + "Purpose" = "database-bootstrap"
+        }
+      + tags_all              = {
+          + "Environment" = "dev"
+          + "ManagedBy"   = "Terraform"
+          + "Name"        = "secure-travel-journal-dev-database-bootstrap"
+          + "Project"     = "SecureTravelJournal"
+          + "Purpose"     = "database-bootstrap"
+          + "Repository"  = "Secure-Travel-Journal-Platform"
+        }
+      + unique_id             = (known after apply)
+
+      + inline_policy (known after apply)
+    }
+
+  # module.security.aws_iam_role_policy.backend will be created
+  + resource "aws_iam_role_policy" "backend" {
+      + id          = (known after apply)
+      + name        = "database-connect"
+      + name_prefix = (known after apply)
+      + policy      = (known after apply)
+      + role        = (known after apply)
+    }
+
+  # module.security.aws_iam_role_policy.database_bootstrap will be created
+  + resource "aws_iam_role_policy" "database_bootstrap" {
+      + id          = (known after apply)
+      + name        = "database-bootstrap-secret"
+      + name_prefix = (known after apply)
+      + policy      = (known after apply)
+      + role        = (known after apply)
+    }
+
+Plan: 76 to add, 0 to change, 0 to destroy.
 
 Changes to Outputs:
-  + application_db_client_security_group_id = (known after apply)
-  + aws_account_id                          = "905418272482"
-  + aws_region                              = "eu-west-2"
-  + database_subnet_ids                     = [
+  + application_db_client_security_group_id  = (known after apply)
+  + aws_account_id                           = "905418272482"
+  + aws_region                               = "eu-west-2"
+  + backend_pod_identity_role_arn            = (known after apply)
+  + database_bootstrap_pod_identity_role_arn = (known after apply)
+  + database_subnet_ids                      = [
       + (known after apply),
       + (known after apply),
     ]
-  + eks_cluster_arn                         = (known after apply)
-  + eks_cluster_endpoint                    = (known after apply)
-  + eks_cluster_name                        = "secure-travel-journal-dev"
-  + eks_cluster_role_arn                    = (known after apply)
-  + eks_cluster_security_group_id           = (known after apply)
-  + eks_cluster_version                     = "1.36"
-  + eks_node_role_arn                       = (known after apply)
-  + environment                             = "dev"
-  + nat_gateway_id                          = (known after apply)
-  + private_subnet_ids                      = [
+  + eks_backend_node_role_arn                = (known after apply)
+  + eks_backend_node_role_name               = "secure-travel-journal-dev-backend-node-role"
+  + eks_cluster_arn                          = (known after apply)
+  + eks_cluster_endpoint                     = (known after apply)
+  + eks_cluster_name                         = "secure-travel-journal-dev"
+  + eks_cluster_role_arn                     = (known after apply)
+  + eks_cluster_security_group_id            = (known after apply)
+  + eks_cluster_version                      = "1.36"
+  + eks_node_role_arn                        = (known after apply)
+  + environment                              = "dev"
+  + nat_gateway_id                           = (known after apply)
+  + private_subnet_ids                       = [
       + (known after apply),
       + (known after apply),
     ]
-  + public_subnet_ids                       = [
+  + public_subnet_ids                        = [
       + (known after apply),
       + (known after apply),
     ]
-  + rds_endpoint                            = (known after apply)
-  + rds_instance_id                         = (known after apply)
-  + rds_master_secret_arn                   = (known after apply)
-  + rds_port                                = 5433
-  + rds_security_group_id                   = (known after apply)
-  + vpc_cidr                                = "10.40.0.0/16"
-  + vpc_flow_log_group                      = "/aws/vpc/secure-travel-journal-dev/flow-logs"
-  + vpc_id                                  = (known after apply)
+  + rds_endpoint                             = (known after apply)
+  + rds_instance_id                          = (known after apply)
+  + rds_master_secret_arn                    = (known after apply)
+  + rds_port                                 = 5433
+  + rds_security_group_id                    = (known after apply)
+  + vpc_cidr                                 = "10.40.0.0/16"
+  + vpc_flow_log_group                       = "/aws/vpc/secure-travel-journal-dev/flow-logs"
+  + vpc_id                                   = (known after apply)

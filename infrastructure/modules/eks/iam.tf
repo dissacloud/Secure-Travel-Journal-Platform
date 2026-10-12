@@ -89,3 +89,21 @@ resource "aws_iam_role_policy_attachment" "node" {
   role       = aws_iam_role.node.name
   policy_arn = each.value
 }
+
+resource "aws_iam_role" "backend_node" {
+  name = "${var.cluster_name}-backend-node-role"
+
+  assume_role_policy = data.aws_iam_policy_document.node_assume_role.json
+
+  tags = {
+    Name    = "${var.cluster_name}-backend-node-role"
+    Purpose = "backend-auto-mode"
+  }
+}
+
+resource "aws_iam_role_policy_attachment" "backend_node" {
+  for_each = local.node_policy_arns
+
+  role       = aws_iam_role.backend_node.name
+  policy_arn = each.value
+}

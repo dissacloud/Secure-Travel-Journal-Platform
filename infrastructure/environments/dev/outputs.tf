@@ -112,3 +112,23 @@ output "application_db_client_security_group_id" {
   description = "Security group future Travel Journal Pods require for database connectivity."
   value       = module.database.application_db_client_security_group_id
 }
+
+output "eks_backend_node_role_arn" {
+  description = "Backend Auto Mode node IAM role."
+  value       = module.eks.backend_node_role_arn
+}
+
+output "eks_backend_node_role_name" {
+  description = "Backend Auto Mode node IAM role name."
+  value       = module.eks.backend_node_role_name
+}
+
+output "backend_pod_identity_role_arn" {
+  description = "Backend EKS Pod Identity IAM role."
+  value       = module.security.backend_pod_role_arn
+}
+
+output "database_bootstrap_pod_identity_role_arn" {
+  description = "Database bootstrap EKS Pod Identity role."
+  value       = module.security.database_bootstrap_pod_role_arn
+}

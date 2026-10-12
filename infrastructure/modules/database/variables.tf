@@ -105,3 +105,8 @@ variable "database_log_retention_days" {
     error_message = "Database log retention must be at least 365 days."
   }
 }
+
+variable "eks_cluster_security_group_id" {
+  description = "EKS cluster security group used by cluster DNS/system workloads."
+  type        = string
+}

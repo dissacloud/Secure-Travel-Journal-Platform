@@ -47,3 +47,8 @@ output "master_secret_kms_key_arn" {
   description = "KMS key encrypting the RDS-managed master credential."
   value       = aws_kms_key.master_secret.arn
 }
+
+output "db_resource_id" {
+  description = "Immutable RDS DB instance resource ID used for IAM database authentication."
+  value       = aws_db_instance.this.resource_id
+}

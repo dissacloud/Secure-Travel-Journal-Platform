@@ -1,0 +1,59 @@
+---
+apiVersion: karpenter.sh/v1
+kind: NodePool
+metadata:
+  name: travel-journal-backend
+spec:
+  template:
+    metadata:
+      labels:
+        workload: travel-journal-backend
+        security-boundary: database-client
+
+    spec:
+      nodeClassRef:
+        group: eks.amazonaws.com
+        kind: NodeClass
+        name: travel-journal-backend
+
+      requirements:
+        - key: kubernetes.io/arch
+          operator: In
+          values:
+            - amd64
+
+        - key: karpenter.sh/capacity-type
+          operator: In
+          values:
+            - on-demand
+
+        - key: eks.amazonaws.com/instance-category
+          operator: In
+          values:
+            - c
+            - m
+
+        - key: eks.amazonaws.com/instance-cpu
+          operator: In
+          values:
+            - "2"
+            - "4"
+
+        - key: topology.kubernetes.io/zone
+          operator: In
+          values:
+            - eu-west-2a
+            - eu-west-2b
+
+      taints:
+        - key: secure-travel-journal/backend
+          value: "true"
+          effect: NoSchedule
+
+  disruption:
+    consolidationPolicy: Balanced
+    consolidateAfter: 30s
+
+  limits:
+    cpu: "8"
+    memory: 32Gi

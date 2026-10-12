@@ -37,3 +37,13 @@ output "control_plane_log_group" {
   description = "CloudWatch log group containing EKS control-plane logs."
   value       = aws_cloudwatch_log_group.control_plane.name
 }
+
+output "backend_node_role_arn" {
+  description = "IAM role used by the secured backend Auto Mode NodeClass."
+  value       = aws_iam_role.backend_node.arn
+}
+
+output "backend_node_role_name" {
+  description = "IAM role name used by the secured backend Auto Mode NodeClass."
+  value       = aws_iam_role.backend_node.name
+}
