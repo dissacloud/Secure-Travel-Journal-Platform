@@ -1,392 +1,249 @@
 # Secure Travel Journal Platform
 
-> A security-focused AWS platform demonstrating how application code progresses from an untrusted pull request into a signed, attestable, independently verified container artifact before deployment to a secure AWS runtime.
+A security-focused Cloud Security / DevSecOps portfolio project that traces software from an untrusted pull request through a signed and independently verified container artifact to a hardened AWS runtime platform.
 
-The **Secure Travel Journal Platform** is a hands-on Cloud Security / DevSecOps portfolio project focused on security engineering across the software-delivery lifecycle.
+The application is intentionally simple. The main goal is to demonstrate security controls across the software delivery lifecycle and AWS runtime. The AWS platform is deployed with Terraform; the application itself is intentionally not deployed yet.
 
-The application itself is intentionally simple. The primary objective is to demonstrate the security architecture surrounding application delivery and cloud runtime infrastructure.
+## What this project demonstrates
 
-## What This Project Demonstrates
+- Secure pull request CI/CD controls and separation of untrusted CI from trusted artifact production.
+- GitHub OIDC federation to AWS and short-lived STS credentials.
+- Least-privilege IAM and separation of build and verification roles.
+- Container vulnerability gating and immutable Amazon ECR artifacts.
+- Cosign keyless signing, SLSA provenance, and SPDX and CycloneDX SBOMs.
+- Independent artifact verification, including negative tests that must fail closed.
+- Terraform security, encrypted state management, and Checkov validation.
+- Private EKS networking, EKS Auto Mode, workload identity, and Kubernetes network controls.
+- Private, encrypted RDS PostgreSQL with managed credentials and scoped database access.
+- Evidence-led platform validation and operational lifecycle documentation.
 
-The project currently demonstrates:
+## Current status
 
-- secure pull-request CI/CD controls;
-- separation between untrusted CI and trusted artifact production;
-- GitHub OIDC federation to AWS;
-- short-lived AWS STS credentials;
-- least-privilege IAM;
-- container vulnerability gating;
-- immutable Amazon ECR artifacts;
-- Cosign keyless signing;
-- SLSA provenance;
-- SPDX and CycloneDX SBOM generation;
-- independent artifact verification;
-- Infrastructure as Code security;
-- secure Terraform state management;
-- evidence-driven security validation.
+| Phase | Capability | Status |
+|---|---|---|
+| Phase 1 | Application baseline | Complete |
+| Phase 2 | Secure pull request CI/CD pipeline | Complete |
+| Phase 3 | Trusted software supply chain | Complete |
+| Phase 4.1–4.4 | AWS foundation, networking, EKS, and database platform | Complete |
+| Phase 4.5 | Workload identity and network boundaries | Complete |
+| Phase 4.6 | End-to-end validation, evidence consolidation, negative security tests, and operations/cost documentation | In progress |
 
-Secure AWS networking, EKS, database, and runtime controls are being implemented incrementally in Phase 4.
-
----
+**Current focus: Phase 4.6 — validate and close the AWS platform milestone.** The application remains intentionally undeployed.
 
 ## Architecture
 
-![Secure Travel Journal Platform - High-Level Architecture](docs/architecture/diagrams/high-level-architecture.png)
+### Software supply chain
 
-### Software Supply Chain
+![Secure Travel Journal Platform - High-Level Architecture](docs/architecture/diagrams/high-level-architecture.png)
 
 ![Secure Travel Journal Platform - Trusted Software Supply Chain](docs/architecture/diagrams/trusted-software-supply-chain.png)
 
 ```text
 Developer
-    |
-    v
-Pull Request
-    |
-    v
-+----------------------------+
-| Untrusted PR Environment   |
-|                            |
-| Tests                      |
-| Gitleaks                   |
-| CodeQL                     |
-| Dependency Review          |
-| npm audit                  |
-| Hadolint                   |
-| Trivy                      |
-| Checkov                    |
-|                            |
-| No trusted AWS identity    |
-| No trusted publishing      |
-+-------------+--------------+
-              |
-              | required checks pass
-              v
-        Protected main
-              |
-              v
-+----------------------------+
-| Trusted Build Environment  |
-|                            |
-| GitHub OIDC                |
-| Short-lived AWS role       |
-| Build once                 |
-| Vulnerability gate         |
-| Push to ECR                |
-| Sign                       |
-| Generate provenance        |
-| Generate SBOMs             |
-+-------------+--------------+
-              |
-              v
-     Immutable ECR Digest
-              |
-              v
-+----------------------------+
-| Independent Verification   |
-|                            |
-| Digest                     |
-| Signer identity            |
-| OIDC issuer                |
-| Source commit              |
-| SLSA provenance            |
-| SPDX attestation           |
-| CycloneDX attestation      |
-+-------------+--------------+
-              |
-              v
-        Trusted Artifact
+   |
+   v
+Pull request — untrusted environment
+   |  tests and security scans; no trusted AWS identity
+   v
+Protected main
+   |
+   v
+Trusted build — GitHub OIDC and short-lived AWS credentials
+   |  build, scan, publish, sign, attest, generate SBOMs
+   v
+Immutable ECR image digest
+   |
+   v
+Independent verification — identity, digest, signature, provenance, SBOM
 ```
 
-The critical design decision is that **pull-request code is treated as untrusted code**.
+Pull request code is treated as untrusted. Pull request workflows can test and scan code, but they cannot obtain the trusted AWS identity used to publish and sign release artifacts.
 
-Pull requests may execute tests and security scans, but they cannot obtain the trusted AWS identity used to publish and sign release artifacts.
+See [the trusted software supply chain design](docs/architecture/trusted-software-supply-chain.md).
 
-Detailed design:
+### AWS runtime platform
 
-[`docs/architecture/trusted-software-supply-chain.md`](docs/architecture/trusted-software-supply-chain.md)
+![Secure Travel Journal Platform - AWS Network Topology](docs/architecture/diagrams/aws-network-topology.png)
 
----
+The Terraform-managed AWS runtime is organized into separate network trust zones. EKS Auto Mode is configured to run application compute in private subnets. PostgreSQL runs on RDS in isolated database subnets. The application itself is not deployed yet.
 
-## Current Status
+Designated workloads are configured to use EKS Pod Identity rather than static AWS credentials or general application permissions inherited from the node role. Backend and database-bootstrap workloads have separate identities and scoped permissions.
 
-| Phase | Capability | Status |
-|---|---|---|
-| Phase 1 | Application baseline | ✅ Complete |
-| Phase 2 | Secure PR CI/CD pipeline | ✅ Complete |
-| Phase 3 | Trusted software supply chain | ✅ Complete |
-| Phase 4.1 | Terraform / AWS infrastructure foundation | ✅ Complete |
-| Phase 4.2 | Secure multi-AZ AWS networking | 🚧 In progress |
-| Phase 4.3+ | EKS, database, and runtime security | 📋 Planned |
+When deployed, backend database connectivity requires every one of these controls:
 
-**Current focus:** Phase 4.2 — Secure AWS Networking.
+1. Placement on the secured backend NodePool.
+2. Authorization by Kubernetes NetworkPolicy.
+3. The dedicated Pod security group.
+4. `rds-db:connect` IAM authorization.
+5. PostgreSQL database authorization.
 
----
+The backend application cannot retrieve the RDS master credential. The database-bootstrap workload has separate, narrowly scoped access to the specific managed secret it requires.
 
-## Security Controls
+See:
 
-| Security objective | Implementation |
+- [AWS runtime platform architecture](docs/architecture/aws-runtime-platform.md)
+- [Platform security control matrix](docs/security/platform-control-matrix.md)
+- [Development platform lifecycle and cost notes](docs/operations/dev-platform-lifecycle.md)
+
+## Security controls
+
+| Security objective | Control or enforcement point |
 |---|---|
-| Secret detection | Gitleaks |
-| Static application security testing | CodeQL |
-| Dependency-change analysis | GitHub Dependency Review |
-| Dependency vulnerability scanning | npm audit |
-| Dockerfile security | Hadolint |
-| Container vulnerability scanning | Trivy |
-| IaC security scanning | Checkov |
-| CI/CD cloud authentication | GitHub OIDC |
-| Temporary AWS credentials | AWS STS |
-| Container registry | Amazon ECR |
-| Artifact immutability | SHA-256 digest |
-| Artifact signing | Cosign |
-| Build provenance | SLSA |
-| Software inventory | SPDX + CycloneDX |
-| Artifact verification | Cosign + attestations |
-| Separation of duties | Build and verifier IAM roles |
-| Infrastructure provisioning | Terraform |
-| Encryption | AWS KMS |
-| Runtime orchestration | Amazon EKS — in progress |
-| Database | Amazon RDS PostgreSQL — planned |
+| Keep pull request code untrusted | Workflow permissions and trust separation |
+| Authenticate GitHub Actions to AWS | GitHub OIDC and short-lived AWS STS credentials |
+| Detect secrets and vulnerable code | Gitleaks, CodeQL, Dependency Review, and `npm audit` |
+| Scan container builds | Hadolint and Trivy gates |
+| Protect infrastructure changes | Terraform and Checkov |
+| Protect build artifacts | ECR digests, Cosign signatures, and SLSA provenance |
+| Verify software inventory | SPDX and CycloneDX SBOM attestations |
+| Separate publishing from verification | Distinct least-privilege IAM roles |
+| Keep EKS nodes off the public internet | Private subnets and VPC routing |
+| Limit Kubernetes API exposure | Private endpoint and restricted public access configuration |
+| Limit workload AWS permissions | EKS Pod Identity and scoped IAM policies |
+| Restrict backend database network access | Backend NodePool, Pod security group, and NetworkPolicy |
+| Protect database credentials | RDS-managed Secrets Manager secret and scoped KMS key |
+| Restrict database connections | `rds-db:connect` IAM and PostgreSQL authorization |
+| Detect network activity | VPC Flow Logs and CloudWatch |
+| Reduce accidental deletion risk | EKS and RDS deletion protection |
 
----
+For the threat-to-control mapping, see the [platform security control matrix](docs/security/platform-control-matrix.md).
 
-## Key Security Design Decisions
+## Key security design decisions
 
-### Untrusted PRs receive no trusted AWS identity
+### Pull requests receive no trusted AWS identity
 
-Pull-request workflows can validate code but cannot publish, sign, or deploy trusted artifacts.
+Pull request workflows can validate code but cannot publish, sign, or deploy trusted artifacts.
 
 ### AWS authentication is federated
 
-GitHub Actions exchanges GitHub OIDC identity for short-lived AWS STS credentials.
-
-Long-lived AWS access keys are not stored in the repository.
+GitHub Actions exchanges its OIDC identity for short-lived AWS STS credentials. Long-lived AWS access keys are not stored in the repository.
 
 ### Artifacts are identified by digest
 
-Trusted container artifacts use immutable SHA-256 ECR references rather than relying solely on mutable tags.
+Trusted container artifacts use immutable SHA-256 ECR references rather than relying only on mutable tags.
 
 ```text
 repository@sha256:<digest>
 ```
 
-### Build and verification roles are separated
+### Build and verification roles are separate
 
-The artifact publisher and artifact verifier use separate AWS IAM roles.
-
-The verifier requires read access but does not require artifact-publishing privileges.
+The artifact publisher and verifier use separate IAM roles. The verifier has the read permissions it needs and does not receive artifact-publishing permissions.
 
 ### Verification fails closed
 
-The project performs both successful and deliberately invalid verification tests.
+Successful verification is tested alongside deliberately invalid cases. A mismatched source identity or commit must cause verification to fail.
 
-A mismatched expected source identity or commit must cause artifact verification to fail.
+### Workload identities and database access are separated
 
-Detailed rationale:
+Backend and database-bootstrap workloads use separate Pod Identity roles. The backend cannot read the RDS master secret. Database access also depends on network controls and PostgreSQL authorization, not IAM alone.
 
-[`docs/security/security-design-decisions.md`](docs/security/security-design-decisions.md)
+See [security design decisions](docs/security/security-design-decisions.md) and the [threat model](docs/security/threat-model.md).
 
----
+## Phase 4.6 validation and closure
 
-## Trusted Artifact Evidence
+Phase 4.6 closes the AWS platform milestone by validating the platform end to end, consolidating architecture and evidence, running deliberate negative security tests, documenting operational and cost considerations, and tagging the infrastructure milestone as `v0.4.0` once the completion criteria pass.
 
-Phase 3 captures evidence for the complete trusted-artifact workflow.
+The validation should confirm the deployed AWS and Kubernetes controls against live configuration, run the required policy checks, verify that negative tests are rejected, and record the results under `docs/evidence/`. Do not describe a control as passed until its validation evidence has been captured.
 
-| Evidence | Demonstrates |
+The development platform can incur charges even when application Pods are absent. Review [the lifecycle and cost note](docs/operations/dev-platform-lifecycle.md) before deployment and teardown. For intentional teardown, disable deletion protection through Terraform, review a fresh plan, and then apply that saved plan.
+
+## Trusted artifact evidence
+
+Phase 3 evidence covers the trusted artifact workflow.
+
+| Evidence | What it demonstrates |
 |---|---|
 | Trusted-build workflow | Controlled artifact production |
 | ECR digest | Immutable artifact identity |
-| SBOM artifacts | SPDX and CycloneDX inventories |
+| SBOMs | SPDX and CycloneDX inventories |
 | SLSA provenance | Build provenance |
 | Cosign signatures | Cryptographic artifact identity |
-| ECR referrers | Associated supply-chain evidence |
+| ECR referrers | Supply-chain evidence associated with an image |
 | Verification gate | Successful independent verification |
 | Negative verification | Fail-closed policy enforcement |
 | IAM evidence | Separation between publisher and verifier |
 
-Full evidence:
+Phase 4 and Phase 4.5 evidence is maintained under [docs/evidence](docs/evidence/).
 
-[`docs/evidence/`](docs/evidence/)
-
----
-
-## Phase 4 — Secure AWS Runtime
-
-### AWS Network Topology
-
-![Secure Travel Journal Platform - AWS Network Topology](docs/architecture/diagrams/aws-network-topology.png)
-
-Phase 4 extends the trusted software-supply-chain architecture into the AWS runtime.
-
-The target architecture follows three principal network trust zones:
-
-```text
-Internet
-   |
-   v
-Public Ingress Tier
-   |
-   v
-Private Application Tier
-   |
-   v
-Isolated Database Tier
-```
-
-The target runtime includes:
-
-- multi-AZ VPC architecture;
-- public ingress subnets;
-- private application subnets;
-- isolated database subnets;
-- controlled outbound access;
-- VPC Flow Logs;
-- CloudWatch logging;
-- Amazon EKS;
-- Amazon RDS PostgreSQL;
-- AWS Secrets Manager;
-- AWS KMS;
-- controlled application ingress.
-
-Phase 4.2 currently focuses on the secure networking foundation.
-
-Detailed runtime design:
-
-[`docs/architecture/aws-runtime-architecture.md`](docs/architecture/aws-runtime-architecture.md)
-
----
-
-## Repository Structure
+## Repository structure
 
 ```text
 Secure-Travel-Journal-Platform/
-|
-├── .github/
-│   └── workflows/
-│       ├── pr-ci.yml
-│       └── trusted-build.yml
-│
-├── application/
-│   ├── backend/
-│   └── frontend/
-│
-├── infrastructure/
-│   └── bootstrap/
-│       ├── terraform-state/
-│       └── trusted-build/
-│
-├── platform/
-│   └── ...
-│
-├── scripts/
-│   └── security/
-│
-├── tests/
-│
+├── .github/workflows/       # Pull request and trusted build workflows
+├── application/             # Backend and frontend application code
+├── infrastructure/          # Terraform infrastructure and bootstrap code
+├── platform/                # Kubernetes platform configuration
+├── scripts/                  # Validation and security scripts
+├── tests/                    # Application and security tests
 ├── docs/
 │   ├── architecture/
-│   ├── security/
 │   ├── evidence/
-│   └── runbooks/
-│
+│   ├── operations/
+│   ├── runbooks/
+│   └── security/
 ├── docker-compose.yml
 ├── SECURITY.md
 └── README.md
 ```
 
----
-
 ## Technology
 
-**AWS:** Amazon ECR, IAM, STS, KMS, VPC, CloudWatch, EKS, and RDS.
+- **AWS:** Amazon ECR, IAM, STS, KMS, VPC, CloudWatch, EKS, RDS, and Secrets Manager.
+- **Infrastructure:** Terraform and Checkov.
+- **CI/CD:** GitHub Actions, GitHub OIDC, branch protection, and Dependabot.
+- **Application security:** Gitleaks, CodeQL, GitHub Dependency Review, and `npm audit`.
+- **Container security:** Docker, Hadolint, and Trivy.
+- **Software supply chain:** Cosign, SLSA provenance, SPDX, CycloneDX, and immutable OCI artifacts.
+- **Application:** React, Node.js, and PostgreSQL.
 
-**Infrastructure:** Terraform and Checkov.
+## Running locally
 
-**CI/CD:** GitHub Actions, GitHub OIDC, branch protection, and Dependabot.
-
-**Application Security:** Gitleaks, CodeQL, GitHub Dependency Review, and npm audit.
-
-**Container Security:** Docker, Hadolint, and Trivy.
-
-**Software Supply Chain:** Cosign, SLSA provenance, SPDX, CycloneDX, and immutable OCI artifacts.
-
-**Application:** React, Node.js, and PostgreSQL.
-
----
-
-## Running Locally
-
-Clone the repository:
+Clone the repository and start the local application:
 
 ```bash
 git clone https://github.com/dissacloud/Secure-Travel-Journal-Platform.git
 cd Secure-Travel-Journal-Platform
-```
-
-Start the local application:
-
-```bash
 docker compose up --build
 ```
 
-The local environment exists primarily to provide a realistic application artifact for the project's security controls.
-
----
+The local application provides a realistic artifact for exercising the project's security controls. It is separate from the not-yet-deployed application workload in the AWS runtime.
 
 ## Documentation
 
-Detailed technical material is maintained under [`docs/`](docs/), including:
-
-- [`docs/security/secure-pr-pipeline.md`](docs/security/secure-pr-pipeline.md) — PR trust boundary and security gates;
-- [`docs/security/security-design-decisions.md`](docs/security/security-design-decisions.md) — architecture decisions, rationale, risks, and trade-offs;
-- [`docs/security/threat-model.md`](docs/security/threat-model.md) — key assets, threats, trust boundaries, and mitigations;
-- [`docs/architecture/trusted-software-supply-chain.md`](docs/architecture/trusted-software-supply-chain.md) — trusted artifact architecture;
-- [`docs/architecture/aws-runtime-architecture.md`](docs/architecture/aws-runtime-architecture.md) — Phase 4 runtime architecture;
-- [`docs/evidence/`](docs/evidence/) — phase-by-phase security evidence;
-- [`docs/runbooks/`](docs/runbooks/) — operational and verification procedures.
-
----
+- [Trusted software supply chain](docs/architecture/trusted-software-supply-chain.md)
+- [AWS runtime platform architecture](docs/architecture/aws-runtime-platform.md)
+- [Platform security control matrix](docs/security/platform-control-matrix.md)
+- [Security design decisions](docs/security/security-design-decisions.md)
+- [Threat model](docs/security/threat-model.md)
+- [Development platform lifecycle and cost note](docs/operations/dev-platform-lifecycle.md)
+- [Evidence](docs/evidence/)
+- [Runbooks](docs/runbooks/)
 
 ## Security
 
-Security issues should not be disclosed through public GitHub issues.
+Do not disclose security issues through public GitHub issues. See [SECURITY.md](SECURITY.md) for the repository security policy and reporting process.
 
-See [`SECURITY.md`](SECURITY.md) for the repository security policy and reporting process.
+## Project direction
 
----
-
-## Project Direction
-
-The completed project is intended to demonstrate an end-to-end security path:
+The end-to-end goal is to establish and validate trust from source code through build and artifact production to the AWS runtime platform:
 
 ```text
-Secure Pull Request
-        |
-        v
-Trusted Build
-        |
-        v
-Signed + Attested Artifact
-        |
-        v
-Independent Verification
-        |
-        v
+Secure pull request
+        ↓
+Trusted build
+        ↓
+Signed and attested artifact
+        ↓
+Independent verification
+        ↓
 Amazon ECR
-        |
-        v
-Secure AWS Runtime
-        |
-        v
-Amazon EKS
-        |
-        v
-Application
-        |
-        v
-Amazon RDS
+        ↓
+Secure AWS runtime platform
+        ↓
+Amazon EKS workload
+        ↓
+Amazon RDS PostgreSQL
 ```
 
-The objective is not simply to deploy an application to AWS.
-
-The objective is to demonstrate how a Cloud Security / DevSecOps engineer can establish and validate trust from source code through build, artifact production, and cloud runtime infrastructure.
+The objective is not simply to deploy an application to AWS. It is to demonstrate how a Cloud Security / DevSecOps engineer establishes and validates trust from source code through build, artifact production, and cloud runtime infrastructure.
